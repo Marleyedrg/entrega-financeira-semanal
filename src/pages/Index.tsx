@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Search } from 'lucide-react';
-import { format } from 'date-fns'; // Add this import
+import { format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import DeliveryForm from '@/components/DeliveryForm';
@@ -29,11 +29,21 @@ const Index = () => {
     );
   }, [searchTerm, deliveries]);
 
-  const totalFees = deliveries.reduce((sum, delivery) => sum + delivery.fee, 0);
+  const totalFees = deliveries.reduce((sum, delivery) => sum + (delivery.fee || 0), 0);
 
   const handleAddDelivery = (newDelivery: Omit<Delivery, 'id'>) => {
     const deliveryWithId = { ...newDelivery, id: uuidv4() };
-    setDeliveries(prev => [...prev, deliveryWithId]);
+    setDeliveries(prev => [deliveryWithId, ...prev]);
+  };
+
+  const handleEditDelivery = (editedDelivery: Delivery) => {
+    setDeliveries(prev =>
+      prev.map(d => d.id === editedDelivery.id ? editedDelivery : d)
+    );
+  };
+
+  const handleDeleteDelivery = (id: string) => {
+    setDeliveries(prev => prev.filter(d => d.id !== id));
   };
 
   const handleExportCSV = () => {
@@ -41,8 +51,8 @@ const Index = () => {
     const csvContent = deliveries.map(d => [
       format(new Date(d.date), 'dd/MM/yyyy'),
       d.orderNumber,
-      d.fee.toFixed(2),
-      d.isPending ? 'Pendente' : 'Pago'
+      d.fee?.toFixed(2) || '-',
+      d.isPending ? 'Taxa Pendente' : 'Taxa Registrada'
     ]);
 
     const csvString = [
@@ -92,7 +102,11 @@ const Index = () => {
           </Button>
         </div>
 
-        <DeliveryList deliveries={filteredDeliveries} />
+        <DeliveryList 
+          deliveries={filteredDeliveries}
+          onDelete={handleDeleteDelivery}
+          onEdit={handleEditDelivery}
+        />
       </div>
     </div>
   );

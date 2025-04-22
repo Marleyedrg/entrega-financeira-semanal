@@ -3,6 +3,8 @@ import React from 'react';
 import { format } from 'date-fns';
 import { Delivery } from '@/types/Delivery';
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Pencil, Trash2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -14,9 +16,11 @@ import {
 
 interface DeliveryListProps {
   deliveries: Delivery[];
+  onDelete: (id: string) => void;
+  onEdit: (delivery: Delivery) => void;
 }
 
-const DeliveryList: React.FC<DeliveryListProps> = ({ deliveries }) => {
+const DeliveryList: React.FC<DeliveryListProps> = ({ deliveries, onDelete, onEdit }) => {
   return (
     <div className="rounded-lg border bg-white">
       <Table>
@@ -27,6 +31,7 @@ const DeliveryList: React.FC<DeliveryListProps> = ({ deliveries }) => {
             <TableHead>Taxa (R$)</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Foto</TableHead>
+            <TableHead>Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -34,10 +39,10 @@ const DeliveryList: React.FC<DeliveryListProps> = ({ deliveries }) => {
             <TableRow key={delivery.id}>
               <TableCell>{format(new Date(delivery.date), 'dd/MM/yyyy')}</TableCell>
               <TableCell>{delivery.orderNumber}</TableCell>
-              <TableCell>{delivery.fee.toFixed(2)}</TableCell>
+              <TableCell>{delivery.fee?.toFixed(2) || '-'}</TableCell>
               <TableCell>
                 <Badge variant={delivery.isPending ? "destructive" : "default"}>
-                  {delivery.isPending ? 'Pendente' : 'Pago'}
+                  {delivery.isPending ? 'Taxa Pendente' : 'Taxa Registrada'}
                 </Badge>
               </TableCell>
               <TableCell>
@@ -48,6 +53,24 @@ const DeliveryList: React.FC<DeliveryListProps> = ({ deliveries }) => {
                     className="w-10 h-10 object-cover rounded"
                   />
                 )}
+              </TableCell>
+              <TableCell>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(delivery)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onDelete(delivery.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
