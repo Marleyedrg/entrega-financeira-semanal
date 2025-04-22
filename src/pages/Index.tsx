@@ -16,6 +16,7 @@ const Index = () => {
   });
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredDeliveries, setFilteredDeliveries] = useState<Delivery[]>([]);
+  const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null);
 
   useEffect(() => {
     localStorage.setItem('deliveries', JSON.stringify(deliveries));
@@ -32,14 +33,28 @@ const Index = () => {
   const totalFees = deliveries.reduce((sum, delivery) => sum + (delivery.fee || 0), 0);
 
   const handleAddDelivery = (newDelivery: Omit<Delivery, 'id'>) => {
-    const deliveryWithId = { ...newDelivery, id: uuidv4() };
-    setDeliveries(prev => [deliveryWithId, ...prev]);
+    if (editingDelivery) {
+      // Update existing delivery
+      setDeliveries(prev =>
+        prev.map(d => d.id === editingDelivery.id 
+          ? { ...newDelivery, id: editingDelivery.id } 
+          : d
+        )
+      );
+      setEditingDelivery(null);
+    } else {
+      // Add new delivery
+      const deliveryWithId = { ...newDelivery, id: uuidv4() };
+      setDeliveries(prev => [deliveryWithId, ...prev]);
+    }
   };
 
-  const handleEditDelivery = (editedDelivery: Delivery) => {
-    setDeliveries(prev =>
-      prev.map(d => d.id === editedDelivery.id ? editedDelivery : d)
-    );
+  const handleEditDelivery = (delivery: Delivery) => {
+    setEditingDelivery(delivery);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingDelivery(null);
   };
 
   const handleDeleteDelivery = (id: string) => {
@@ -82,7 +97,11 @@ const Index = () => {
           </div>
         </div>
 
-        <DeliveryForm onSubmit={handleAddDelivery} />
+        <DeliveryForm 
+          onSubmit={handleAddDelivery} 
+          editingDelivery={editingDelivery}
+          onCancelEdit={handleCancelEdit}
+        />
 
         <div className="flex gap-4">
           <div className="flex-1 relative">
