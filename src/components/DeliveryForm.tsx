@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Delivery } from '@/types/Delivery';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface DeliveryFormProps {
   onSubmit: (delivery: Omit<Delivery, 'id'>) => void;
@@ -29,6 +30,7 @@ const DeliveryForm: React.FC<DeliveryFormProps> = ({
   const [image, setImage] = useState<File | null>(null);
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const isMobile = useIsMobile();
 
   // Update form when editing a delivery
   useEffect(() => {
@@ -71,13 +73,14 @@ const DeliveryForm: React.FC<DeliveryFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-4 rounded-lg shadow space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 ${isMobile ? '' : 'md:grid-cols-3'} gap-4`}>
         <Input
           placeholder="Número do Pedido"
           value={orderNumber}
           onChange={(e) => setOrderNumber(e.target.value)}
           required
           autoFocus
+          className="text-base md:text-sm"
         />
         <Input
           type="number"
@@ -85,20 +88,22 @@ const DeliveryForm: React.FC<DeliveryFormProps> = ({
           placeholder="Taxa de Entrega (opcional)"
           value={fee}
           onChange={(e) => setFee(e.target.value)}
+          className="text-base md:text-sm"
         />
         <Input
           type="file"
           accept="image/*"
           onChange={(e) => setImage(e.target.files?.[0] || null)}
+          className="text-base md:text-sm"
         />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant={"outline"}
               className={cn(
-                "w-full justify-start text-left font-normal",
+                "w-full justify-start text-left font-normal text-base md:text-sm",
                 !date && "text-muted-foreground"
               )}
             >
@@ -117,8 +122,11 @@ const DeliveryForm: React.FC<DeliveryFormProps> = ({
           </PopoverContent>
         </Popover>
       </div>
-      <div className="flex gap-2">
-        <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700">
+      <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-2`}>
+        <Button 
+          type="submit" 
+          className={`${isMobile ? 'text-base' : 'text-sm'} bg-green-600 hover:bg-green-700 ${isMobile ? 'w-full' : 'flex-1'}`}
+        >
           {editingDelivery ? 'Atualizar Pedido' : 'Registrar Pedido'}
         </Button>
         {editingDelivery && (
@@ -126,7 +134,7 @@ const DeliveryForm: React.FC<DeliveryFormProps> = ({
             type="button" 
             variant="outline" 
             onClick={onCancelEdit}
-            className="flex-1"
+            className={`${isMobile ? 'text-base' : 'text-sm'} ${isMobile ? 'w-full' : 'flex-1'}`}
           >
             Cancelar Edição
           </Button>
@@ -137,4 +145,3 @@ const DeliveryForm: React.FC<DeliveryFormProps> = ({
 };
 
 export default DeliveryForm;
-
