@@ -267,16 +267,22 @@ csvInput.onchange = (e) => {
 
 const exportCSV = () => {
     const headers = ['Data', 'Número do Pedido', 'Taxa', 'Status'];
-    const csvContent = deliveries.map(d => [
-        formatDate(d.date),
-        d.orderNumber,
-        d.fee?.toFixed(2) || '-',
-        d.fee ? 'Taxa Registrada' : 'Taxa Pendente'
-    ]);
+    const csvContent = deliveries.map(d => {
+        const date = new Date(d.date.includes('-') ? d.date : d.date.split('/').reverse().join('-'));
+        const formattedDate = `${String(date.getDate() + 1).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+        return [
+            formattedDate,
+            d.orderNumber,
+            d.fee?.toFixed(2) || '-',
+            d.fee ? 'Taxa Registrada' : 'Taxa Pendente'
+        ];
+    });
+
     const csv = [
         headers.join(','),
         ...csvContent.map(row => row.join(','))
     ].join('\n');
+
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
