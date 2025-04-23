@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Search } from 'lucide-react';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import DeliveryForm from '@/components/DeliveryForm';
@@ -61,6 +62,21 @@ const Index = () => {
     setDeliveries(prev => prev.filter(d => d.id !== id));
   };
 
+  const generateFileName = () => {
+    const currentDate = new Date();
+    const monthNames = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    const month = monthNames[currentDate.getMonth()];
+    
+    // Calculate week number (1-4) within the month
+    const dayOfMonth = currentDate.getDate();
+    const weekNumber = Math.ceil(dayOfMonth / 7);
+    
+    // Generate random 3-digit ID
+    const randomId = Math.floor(Math.random() * 900) + 100;
+    
+    return `${month}semana${weekNumber}_${randomId}`;
+  };
+
   const handleExportCSV = () => {
     const headers = ['Data', 'Número do Pedido', 'Taxa', 'Status'];
     const csvContent = deliveries.map(d => [
@@ -78,7 +94,7 @@ const Index = () => {
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `entregas_${format(new Date(), 'dd-MM-yyyy')}.csv`;
+    link.download = `${generateFileName()}.csv`;
     link.click();
   };
 
