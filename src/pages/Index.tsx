@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Search } from 'lucide-react';
+import { Search, Import } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
 import DeliveryForm from '@/components/DeliveryForm';
 import DeliveryList from '@/components/DeliveryList';
 import { Delivery } from '@/types/Delivery';
@@ -32,6 +32,8 @@ const Index = () => {
   }, [searchTerm, deliveries]);
 
   const totalFees = deliveries.reduce((sum, delivery) => sum + (delivery.fee || 0), 0);
+
+  const { toast } = useToast();
 
   const handleAddDelivery = (newDelivery: Omit<Delivery, 'id'>) => {
     if (editingDelivery) {
@@ -60,6 +62,48 @@ const Index = () => {
 
   const handleDeleteDelivery = (id: string) => {
     setDeliveries(prev => prev.filter(d => d.id !== id));
+  };
+
+  const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split('\n');
+        
+        // Skip header row and process data
+        const newDeliveries = lines.slice(1).map((line) => {
+          if (!line.trim()) return null; // Skip empty lines
+          
+          const [date, orderNumber, fee, status] = line.split(',');
+          
+          return {
+            id: uuidv4(),
+            date: format(new Date(date.split('/').reverse().join('-')), 'yyyy-MM-dd'),
+            orderNumber: orderNumber.trim(),
+            fee: fee.trim() !== '-' ? parseFloat(fee) : null,
+            isPending: status.trim() === 'Taxa Pendente',
+          };
+        }).filter((delivery): delivery is Delivery => delivery !== null);
+
+        setDeliveries(prev => [...newDeliveries, ...prev]);
+        toast({
+          title: "Importação concluída",
+          description: `${newDeliveries.length} entregas importadas com sucesso.`,
+        });
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Erro na importação",
+          description: "Formato do arquivo inválido. Certifique-se de usar um arquivo CSV válido.",
+        });
+      }
+    };
+
+    reader.readAsText(file);
   };
 
   const generateFileName = () => {
@@ -129,12 +173,29 @@ const Index = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Button
-            onClick={handleFinishWeek}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            Finalizar Semana
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => document.getElementById('csvInput')?.click()}
+              className="flex items-center gap-2"
+            >
+              <Import className="h-4 w-4" />
+              Importar CSV
+            </Button>
+            <input
+              id="csvInput"
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleImportCSV}
+            />
+            <Button
+              onClick={handleFinishWeek}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Finalizar Semana
+            </Button>
+          </div>
         </div>
 
         <DeliveryList 
