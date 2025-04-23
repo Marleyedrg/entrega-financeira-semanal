@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Delivery } from '@/types/Delivery';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, ZoomIn } from 'lucide-react';
+import ImageViewer from './ImageViewer';
 import {
   Table,
   TableBody,
@@ -21,6 +22,8 @@ interface DeliveryListProps {
 }
 
 const DeliveryList: React.FC<DeliveryListProps> = ({ deliveries, onDelete, onEdit }) => {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
   return (
     <div className="rounded-lg border bg-white">
       <Table>
@@ -47,11 +50,22 @@ const DeliveryList: React.FC<DeliveryListProps> = ({ deliveries, onDelete, onEdi
               </TableCell>
               <TableCell>
                 {delivery.imageUrl && (
-                  <img
-                    src={delivery.imageUrl}
-                    alt="Comprovante"
-                    className="w-10 h-10 object-cover rounded"
-                  />
+                  <div className="relative group">
+                    <img
+                      src={delivery.imageUrl}
+                      alt="Comprovante"
+                      className="w-10 h-10 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => setSelectedImage(delivery.imageUrl)}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute inset-0 m-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => setSelectedImage(delivery.imageUrl)}
+                    >
+                      <ZoomIn className="h-4 w-4" />
+                    </Button>
+                  </div>
                 )}
               </TableCell>
               <TableCell>
@@ -76,6 +90,14 @@ const DeliveryList: React.FC<DeliveryListProps> = ({ deliveries, onDelete, onEdi
           ))}
         </TableBody>
       </Table>
+
+      {selectedImage && (
+        <ImageViewer
+          imageUrl={selectedImage}
+          isOpen={!!selectedImage}
+          onClose={() => setSelectedImage(null)}
+        />
+      )}
     </div>
   );
 };

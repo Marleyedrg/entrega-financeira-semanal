@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
@@ -28,16 +29,15 @@ const DeliveryForm: React.FC<DeliveryFormProps> = ({
   const [orderNumber, setOrderNumber] = useState('');
   const [fee, setFee] = useState<string>('');
   const [image, setImage] = useState<File | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
+  const [imagePreview, setImagePreview] = useState<string | undefined>(undefined);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const isMobile = useIsMobile();
 
-  // Update form when editing a delivery
   useEffect(() => {
     if (editingDelivery) {
       setOrderNumber(editingDelivery.orderNumber);
       setFee(editingDelivery.fee ? String(editingDelivery.fee) : '');
-      setImageUrl(editingDelivery.imageUrl);
+      setImagePreview(editingDelivery.imageUrl);
       setDate(new Date(editingDelivery.date));
     } else {
       resetForm();
@@ -48,8 +48,16 @@ const DeliveryForm: React.FC<DeliveryFormProps> = ({
     setOrderNumber('');
     setFee('');
     setImage(null);
-    setImageUrl(undefined);
+    setImagePreview(undefined);
     setDate(new Date());
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -60,7 +68,7 @@ const DeliveryForm: React.FC<DeliveryFormProps> = ({
       orderNumber,
       fee: fee ? Number(fee) : null,
       isPending: !fee,
-      imageUrl: image ? URL.createObjectURL(image) : imageUrl
+      imageUrl: imagePreview
     };
     
     onSubmit(newDelivery);
@@ -74,54 +82,91 @@ const DeliveryForm: React.FC<DeliveryFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="bg-white p-4 rounded-lg shadow space-y-4">
       <div className={`grid grid-cols-1 ${isMobile ? '' : 'md:grid-cols-3'} gap-4`}>
-        <Input
-          placeholder="Número do Pedido"
-          value={orderNumber}
-          onChange={(e) => setOrderNumber(e.target.value)}
-          required
-          autoFocus
-          className="text-base md:text-sm"
-        />
-        <Input
-          type="number"
-          step="0.01"
-          placeholder="Taxa de Entrega (opcional)"
-          value={fee}
-          onChange={(e) => setFee(e.target.value)}
-          className="text-base md:text-sm"
-        />
-        <Input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setImage(e.target.files?.[0] || null)}
-          className="text-base md:text-sm"
-        />
-      </div>
-      <div className="grid grid-cols-1 gap-4">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant={"outline"}
-              className={cn(
-                "w-full justify-start text-left font-normal text-base md:text-sm",
-                !date && "text-muted-foreground"
-              )}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {date ? format(date, "PPP") : <span>Selecione a data</span>}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={date}
-              onSelect={setDate}
-              initialFocus
-              className={cn("p-3 pointer-events-auto")}
+        <div className="space-y-2">
+          <Label htmlFor="orderNumber">Número do Pedido</Label>
+          <Input
+            id="orderNumber"
+            placeholder="Digite o número do pedido"
+            value={orderNumber}
+            onChange={(e) => setOrderNumber(e.target.value)}
+            required
+            autoFocus
+            className="text-base md:text-sm"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="fee">Taxa de Entrega</Label>
+          <Input
+            id="fee"
+            type="number"
+            step="0.01"
+            placeholder="Digite a taxa (opcional)"
+            value={fee}
+            onChange={(e) => setFee(e.target.value)}
+            className="text-base md:text-sm"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="image">Comprovante</Label>
+          <div className="relative">
+            <Input
+              id="image"
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
             />
-          </PopoverContent>
-        </Popover>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full flex items-center gap-2"
+              onClick={() => document.getElementById('image')?.click()}
+            >
+              <Upload className="h-4 w-4" />
+              {imagePreview ? 'Trocar imagem' : 'Carregar imagem'}
+            </Button>
+            {imagePreview && (
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="mt-2 w-20 h-20 object-cover rounded"
+              />
+            )}
+          </div>
+        </div>
       </div>
+
+      <div className="grid grid-cols-1 gap-4">
+        <div className="space-y-2">
+          <Label>Data</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal text-base md:text-sm",
+                  !date && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date ? format(date, "PPP") : <span>Selecione a data</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={setDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
       <div className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-2`}>
         <Button 
           type="submit" 
