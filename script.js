@@ -1,4 +1,19 @@
 
+// Definição de diretórios
+const DATA_DIR = 'data';
+const ANALYTICS_DIR = `${DATA_DIR}/analytics`;
+
+// Garantir que os diretórios existam ao iniciar
+(function ensureDirectories() {
+    try {
+        // Como estamos em um ambiente de navegador, não podemos criar diretórios diretamente
+        // Os diretórios serão criados virtualmente quando necessário
+        console.log('Sistema inicializado. Os arquivos serão salvos localmente.');
+    } catch (error) {
+        console.error('Erro ao inicializar o sistema de arquivos:', error);
+    }
+})();
+
 // Helper functions
 const formatDate = (date) => {
     const d = new Date(date);
@@ -9,9 +24,17 @@ const formatCurrency = (value) => {
     return parseFloat(value || 0).toFixed(2);
 };
 
+const getWeekdayName = (date) => {
+    const weekdays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const d = new Date(date);
+    return weekdays[d.getDay()];
+};
+
 // State management
 let deliveries = JSON.parse(localStorage.getItem('deliveries') || '[]');
 let editingId = null;
+let analyticsFiles = JSON.parse(localStorage.getItem('analyticsFiles') || '[]');
+let currentAnalyticsData = null;
 
 // DOM Elements
 const deliveryForm = document.getElementById('deliveryForm');
@@ -27,6 +50,27 @@ const imagePreview = document.getElementById('imagePreview');
 const importButton = document.getElementById('importButton');
 const csvInput = document.getElementById('csvInput');
 const finishWeekButton = document.getElementById('finishWeekButton');
+const analyticsFileSelect = document.getElementById('analyticsFileSelect');
+const tabButtons = document.querySelectorAll('.tab-button');
+const tabContents = document.querySelectorAll('.tab-content');
+
+// Tab navigation
+tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        const tabId = button.dataset.tab;
+        
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        
+        button.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+        
+        if (tabId === 'analytics') {
+            loadAnalyticsFiles();
+            renderAnalytics();
+        }
+    });
+});
 
 // Update total
 const updateTotal = () => {
@@ -80,13 +124,16 @@ const renderTable = (items = deliveries) => {
 // Form handling
 deliveryForm.addEventListener('submit', (e) => {
     e.preventDefault();
-
+    
     const formData = {
         orderNumber: e.target.orderNumber.value,
         fee: e.target.fee.value ? parseFloat(e.target.fee.value) : null,
         date: e.target.date.value,
         imageUrl: imagePreview.querySelector('img')?.src,
-        id: editingId || Date.now().toString()
+        id: editingId || Date.now().toString(),
+        // Adicionar metadados para análise
+        weekday: getWeekdayName(e.target.date.value),
+        timestamp: Date.now()
     };
 
     if (editingId) {
@@ -101,6 +148,19 @@ deliveryForm.addEventListener('submit', (e) => {
     deliveryForm.reset();
     imagePreview.innerHTML = '';
     e.target.querySelector('button[type="submit"]').textContent = 'Registrar Pedido';
+    
+    // Definir a data para hoje se o campo estiver vazio
+    if (!e.target.date.value) {
+        e.target.date.valueAsDate = new Date();
+    }
+});
+
+// Inicializar o campo de data com a data atual
+window.addEventListener('DOMContentLoaded', () => {
+    const dateField = document.getElementById('date');
+    if (dateField && !dateField.value) {
+        dateField.valueAsDate = new Date();
+    }
 });
 
 // Search functionality
@@ -113,10 +173,10 @@ searchInput.addEventListener('input', (e) => {
 });
 
 // Image handling
-const openModal = (imageUrl) => {
+function openModal(imageUrl) {
     modalImage.src = imageUrl;
     imageModal.style.display = 'block';
-};
+}
 
 closeModal.onclick = () => {
     imageModal.style.display = 'none';
@@ -166,12 +226,15 @@ csvInput.onchange = (e) => {
                 const newDeliveries = lines.slice(1).map(line => {
                     if (!line.trim()) return null;
                     const [date, orderNumber, fee, status] = line.split(',');
+                    const deliveryDate = new Date(date.split('/').reverse().join('-')).toISOString().split('T')[0];
                     return {
                         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                        date: new Date(date.split('/').reverse().join('-')).toISOString().split('T')[0],
+                        date: deliveryDate,
                         orderNumber: orderNumber.trim(),
                         fee: fee.trim() !== '-' ? parseFloat(fee) : null,
-                        imageUrl: null
+                        imageUrl: null,
+                        weekday: getWeekdayName(deliveryDate),
+                        timestamp: Date.now()
                     };
                 }).filter(d => d !== null);
 
@@ -208,15 +271,169 @@ const exportCSV = () => {
     link.click();
 };
 
-finishWeekButton.onclick = () => {
-    exportCSV();
+// Analytics Functions
+const saveAnalyticsData = () => {
+    if (deliveries.length === 0) {
+        alert("Não há entregas para salvar!");
+        return;
+    }
+
+    const fileName = generateFileName();
+    const data = {
+        id: fileName,
+        name: fileName,
+        date: new Date().toISOString(),
+        data: [...deliveries]
+    };
+
+    analyticsFiles.push(data);
+    localStorage.setItem('analyticsFiles', JSON.stringify(analyticsFiles));
+    
+    // Limpar entregas atuais após salvar
     deliveries = [];
     saveDeliveries();
     renderTable();
+    
+    alert(`Dados salvos com sucesso! Arquivo: ${fileName}`);
+};
+
+const loadAnalyticsFiles = () => {
+    analyticsFileSelect.innerHTML = '<option value="">Selecione um arquivo de dados</option>';
+    
+    analyticsFiles.forEach(file => {
+        const option = document.createElement('option');
+        option.value = file.id;
+        option.textContent = `${file.name} (${new Date(file.date).toLocaleDateString('pt-BR')})`;
+        analyticsFileSelect.appendChild(option);
+    });
+};
+
+analyticsFileSelect.addEventListener('change', (e) => {
+    const fileId = e.target.value;
+    if (!fileId) {
+        currentAnalyticsData = null;
+        renderAnalytics();
+        return;
+    }
+    
+    currentAnalyticsData = analyticsFiles.find(file => file.id === fileId);
+    renderAnalytics();
+});
+
+const renderAnalytics = () => {
+    if (!currentAnalyticsData) {
+        document.getElementById('weekdayChart').innerHTML = '<p class="empty-state">Selecione um arquivo para visualizar os dados</p>';
+        document.getElementById('peakDay').innerHTML = '<p class="empty-state">Nenhum dado selecionado</p>';
+        document.getElementById('financialSummary').innerHTML = '<p class="empty-state">Nenhum dado selecionado</p>';
+        document.getElementById('deliveryHistory').innerHTML = '<p class="empty-state">Nenhum dado selecionado</p>';
+        return;
+    }
+    
+    const deliveries = currentAnalyticsData.data;
+    
+    // Análise 1: Entregas por dia da semana
+    const weekdayCounts = {
+        'Domingo': 0,
+        'Segunda': 0,
+        'Terça': 0,
+        'Quarta': 0,
+        'Quinta': 0,
+        'Sexta': 0,
+        'Sábado': 0
+    };
+    
+    const weekdayFees = {
+        'Domingo': 0,
+        'Segunda': 0,
+        'Terça': 0,
+        'Quarta': 0,
+        'Quinta': 0,
+        'Sexta': 0,
+        'Sábado': 0
+    };
+    
+    deliveries.forEach(delivery => {
+        const day = getWeekdayName(delivery.date);
+        weekdayCounts[day] = (weekdayCounts[day] || 0) + 1;
+        if (delivery.fee) {
+            weekdayFees[day] = (weekdayFees[day] || 0) + parseFloat(delivery.fee);
+        }
+    });
+    
+    // Renderizar gráfico de barras para entregas por dia da semana
+    const weekdayChartElement = document.getElementById('weekdayChart');
+    weekdayChartElement.innerHTML = `
+        <div class="bar-chart">
+            ${Object.entries(weekdayCounts).map(([day, count]) => `
+                <div class="bar" style="height: ${count ? Math.max((count / Math.max(...Object.values(weekdayCounts))) * 180, 10) : 0}px">
+                    <div class="bar-value">${count}</div>
+                    <div class="bar-label">${day.substring(0, 3)}</div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    // Análise 2: Dia com mais entregas
+    const sortedDays = Object.entries(weekdayCounts)
+        .sort((a, b) => b[1] - a[1]);
+    
+    const peakDay = sortedDays[0];
+    const peakDayElement = document.getElementById('peakDay');
+    
+    peakDayElement.innerHTML = `
+        <p>O dia com maior número de entregas foi <span class="highlight">${peakDay[0]}</span> com <span class="highlight">${peakDay[1]} entregas</span>.</p>
+        <p>Isso representa <span class="highlight">${Math.round((peakDay[1] / deliveries.length) * 100)}%</span> do total de entregas.</p>
+    `;
+    
+    // Análise 3: Resumo Financeiro
+    const totalFees = deliveries.reduce((sum, delivery) => sum + (parseFloat(delivery.fee) || 0), 0);
+    const completedDeliveries = deliveries.filter(d => d.fee).length;
+    const pendingDeliveries = deliveries.filter(d => !d.fee).length;
+    
+    const financialSummaryElement = document.getElementById('financialSummary');
+    financialSummaryElement.innerHTML = `
+        <p>Total arrecadado: <span class="highlight">R$ ${formatCurrency(totalFees)}</span></p>
+        <p>Média por entrega: <span class="highlight">R$ ${completedDeliveries ? formatCurrency(totalFees / completedDeliveries) : '0.00'}</span></p>
+        <p>Entregas pagas: <span class="highlight">${completedDeliveries}</span></p>
+        <p>Entregas pendentes: <span class="highlight">${pendingDeliveries}</span></p>
+        <p>Total de entregas: <span class="highlight">${deliveries.length}</span></p>
+    `;
+    
+    // Análise 4: Histórico de Entregas (Gráfico por data)
+    const dateCount = {};
+    deliveries.forEach(delivery => {
+        const formattedDate = formatDate(delivery.date);
+        dateCount[formattedDate] = (dateCount[formattedDate] || 0) + 1;
+    });
+    
+    const deliveryHistoryElement = document.getElementById('deliveryHistory');
+    
+    if (Object.keys(dateCount).length > 1) {
+        deliveryHistoryElement.innerHTML = `
+            <div class="bar-chart">
+                ${Object.entries(dateCount).slice(0, 7).map(([date, count]) => `
+                    <div class="bar" style="height: ${count ? Math.max((count / Math.max(...Object.values(dateCount))) * 180, 10) : 0}px">
+                        <div class="bar-value">${count}</div>
+                        <div class="bar-label">${date}</div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } else {
+        deliveryHistoryElement.innerHTML = `
+            <p class="empty-state">Dados insuficientes para gerar o gráfico de histórico.</p>
+        `;
+    }
+};
+
+// Salvar dados e criar arquivo JSON ao finalizar semana
+finishWeekButton.onclick = () => {
+    exportCSV();
+    saveAnalyticsData();
 };
 
 // Edit and Delete functions
-const editDelivery = (id) => {
+window.editDelivery = (id) => {
     const delivery = deliveries.find(d => d.id === id);
     if (delivery) {
         editingId = id;
@@ -230,13 +447,15 @@ const editDelivery = (id) => {
     }
 };
 
-const deleteDelivery = (id) => {
+window.deleteDelivery = (id) => {
     if (confirm('Tem certeza que deseja excluir esta entrega?')) {
         deliveries = deliveries.filter(d => d.id !== id);
         saveDeliveries();
         renderTable();
     }
 };
+
+window.openModal = openModal;
 
 // Initial render
 renderTable();
