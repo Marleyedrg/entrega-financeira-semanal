@@ -1,4 +1,3 @@
-
 // Definição de diretórios
 const DATA_DIR = 'data';
 const ANALYTICS_DIR = `${DATA_DIR}/analytics`;
@@ -90,9 +89,12 @@ const renderTable = (items = deliveries) => {
     tbody.innerHTML = '';
 
     items.forEach(delivery => {
+        const date = new Date(delivery.date);
+        const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${formatDate(delivery.date)}</td>
+            <td>${formattedDate}</td>
             <td>${delivery.orderNumber}</td>
             <td>${delivery.fee ? formatCurrency(delivery.fee) : '-'}</td>
             <td>
@@ -124,20 +126,23 @@ const renderTable = (items = deliveries) => {
 // Form handling
 deliveryForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    
+
+    // Converter a data do formato dd/mm/aaaa para aaaa-mm-dd
+    const [day, month, year] = e.target.date.value.split('/');
+    const isoDate = `${year}-${month}-${day}`;
+
     const formData = {
         orderNumber: e.target.orderNumber.value,
         fee: e.target.fee.value ? parseFloat(e.target.fee.value) : null,
-        date: e.target.date.value,
+        date: new Date(isoDate + 'T00:00:00'), // Ajustar para meia-noite no horário local
         imageUrl: imagePreview.querySelector('img')?.src,
         id: editingId || Date.now().toString(),
-        // Adicionar metadados para análise
-        weekday: getWeekdayName(e.target.date.value),
+        weekday: getWeekdayName(isoDate),
         timestamp: Date.now()
     };
 
     if (editingId) {
-        deliveries = deliveries.map(d => d.id === editingId ? {...formData} : d);
+        deliveries = deliveries.map(d => d.id === editingId ? { ...formData } : d);
         editingId = null;
     } else {
         deliveries.unshift(formData);
@@ -145,23 +150,36 @@ deliveryForm.addEventListener('submit', (e) => {
 
     saveDeliveries();
     renderTable();
-    deliveryForm.reset();
+
+    // Limpar apenas os campos necessários, mantendo a data personalizada
+    deliveryForm.orderNumber.value = '';
+    deliveryForm.fee.value = '';
     imagePreview.innerHTML = '';
     e.target.querySelector('button[type="submit"]').textContent = 'Registrar Pedido';
-    
-    // Definir a data para hoje se o campo estiver vazio
-    if (!e.target.date.value) {
-        e.target.date.valueAsDate = new Date();
-    }
 });
 
 // Inicializar o campo de data com a data atual
 window.addEventListener('DOMContentLoaded', () => {
     const dateField = document.getElementById('date');
     if (dateField && !dateField.value) {
-        dateField.valueAsDate = new Date();
+        const today = new Date();
+        const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+        dateField.value = formattedDate; // Inicializar com a data atual no formato dd/mm/aaaa
     }
 });
+
+// Função para aplicar máscara de data no formato dd/mm/aaaa
+const applyDateMask = (input) => {
+    input.value = input.value
+        .replace(/\D/g, '') // Remove caracteres não numéricos
+        .replace(/(\d{2})(\d)/, '$1/$2') // Adiciona a primeira barra
+        .replace(/(\d{2})(\d)/, '$1/$2') // Adiciona a segunda barra
+        .slice(0, 10); // Limita o tamanho a 10 caracteres
+};
+
+// Adicionar evento de input para aplicar a máscara
+const dateField = document.getElementById('date');
+dateField.addEventListener('input', () => applyDateMask(dateField));
 
 // Search functionality
 searchInput.addEventListener('input', (e) => {
@@ -237,7 +255,6 @@ csvInput.onchange = (e) => {
                         timestamp: Date.now()
                     };
                 }).filter(d => d !== null);
-
                 deliveries = [...newDeliveries, ...deliveries];
                 saveDeliveries();
                 renderTable();
@@ -258,12 +275,10 @@ const exportCSV = () => {
         d.fee?.toFixed(2) || '-',
         d.fee ? 'Taxa Registrada' : 'Taxa Pendente'
     ]);
-
     const csv = [
         headers.join(','),
         ...csvContent.map(row => row.join(','))
     ].join('\n');
-
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -277,7 +292,6 @@ const saveAnalyticsData = () => {
         alert("Não há entregas para salvar!");
         return;
     }
-
     const fileName = generateFileName();
     const data = {
         id: fileName,
@@ -285,7 +299,6 @@ const saveAnalyticsData = () => {
         date: new Date().toISOString(),
         data: [...deliveries]
     };
-
     analyticsFiles.push(data);
     localStorage.setItem('analyticsFiles', JSON.stringify(analyticsFiles));
     
@@ -293,7 +306,6 @@ const saveAnalyticsData = () => {
     deliveries = [];
     saveDeliveries();
     renderTable();
-    
     alert(`Dados salvos com sucesso! Arquivo: ${fileName}`);
 };
 
@@ -315,7 +327,6 @@ analyticsFileSelect.addEventListener('change', (e) => {
         renderAnalytics();
         return;
     }
-    
     currentAnalyticsData = analyticsFiles.find(file => file.id === fileId);
     renderAnalytics();
 });
@@ -328,7 +339,6 @@ const renderAnalytics = () => {
         document.getElementById('deliveryHistory').innerHTML = '<p class="empty-state">Nenhum dado selecionado</p>';
         return;
     }
-    
     const deliveries = currentAnalyticsData.data;
     
     // Análise 1: Entregas por dia da semana
@@ -339,9 +349,8 @@ const renderAnalytics = () => {
         'Quarta': 0,
         'Quinta': 0,
         'Sexta': 0,
-        'Sábado': 0
+        'Sábado': 0,
     };
-    
     const weekdayFees = {
         'Domingo': 0,
         'Segunda': 0,
@@ -349,9 +358,8 @@ const renderAnalytics = () => {
         'Quarta': 0,
         'Quinta': 0,
         'Sexta': 0,
-        'Sábado': 0
+        'Sábado': 0,
     };
-    
     deliveries.forEach(delivery => {
         const day = getWeekdayName(delivery.date);
         weekdayCounts[day] = (weekdayCounts[day] || 0) + 1;
@@ -376,7 +384,6 @@ const renderAnalytics = () => {
     // Análise 2: Dia com mais entregas
     const sortedDays = Object.entries(weekdayCounts)
         .sort((a, b) => b[1] - a[1]);
-    
     const peakDay = sortedDays[0];
     const peakDayElement = document.getElementById('peakDay');
     
@@ -389,7 +396,6 @@ const renderAnalytics = () => {
     const totalFees = deliveries.reduce((sum, delivery) => sum + (parseFloat(delivery.fee) || 0), 0);
     const completedDeliveries = deliveries.filter(d => d.fee).length;
     const pendingDeliveries = deliveries.filter(d => !d.fee).length;
-    
     const financialSummaryElement = document.getElementById('financialSummary');
     financialSummaryElement.innerHTML = `
         <p>Total arrecadado: <span class="highlight">R$ ${formatCurrency(totalFees)}</span></p>
@@ -405,9 +411,7 @@ const renderAnalytics = () => {
         const formattedDate = formatDate(delivery.date);
         dateCount[formattedDate] = (dateCount[formattedDate] || 0) + 1;
     });
-    
     const deliveryHistoryElement = document.getElementById('deliveryHistory');
-    
     if (Object.keys(dateCount).length > 1) {
         deliveryHistoryElement.innerHTML = `
             <div class="bar-chart">
