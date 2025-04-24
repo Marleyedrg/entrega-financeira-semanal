@@ -1,73 +1,75 @@
-# Welcome to your Lovable project
 
-## Project info
+# Registro de Entregas - Sistema de Gestão
 
-**URL**: https://lovable.dev/projects/99646ccc-7bdb-4b75-8bff-29e4da5b7e04
+## Visão Geral
 
-## How can I edit this code?
+Este aplicativo web foi criado para gerenciar registros de entregas, com funcionalidades para adicionar, editar, pesquisar e analisar dados de entregas. O sistema utiliza uma arquitetura moderna e bem organizada para garantir manutenibilidade e escalabilidade.
 
-There are several ways of editing your application.
+## Estrutura do Projeto
 
-**Use Lovable**
+O projeto segue uma arquitetura organizada em camadas e componentes:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/99646ccc-7bdb-4b75-8bff-29e4da5b7e04) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+src/
+├── components/         # Componentes React organizados por função
+│   ├── analytics/      # Componentes para análise de dados
+│   ├── delivery/       # Componentes de registro e visualização de entregas
+│   ├── file-operations/# Componentes para importação/exportação de arquivos
+│   ├── layout/         # Componentes de layout da aplicação
+│   ├── search/         # Componentes de pesquisa
+│   ├── tabs/           # Componentes de navegação em abas
+│   └── ui/             # Componentes de interface reutilizáveis
+├── hooks/              # Hooks React personalizados
+├── pages/              # Páginas da aplicação
+├── services/           # Serviços de negócio
+├── types/              # Definições de tipos TypeScript
+└── utils/              # Funções utilitárias
 ```
 
-**Edit a file directly in GitHub**
+## Principais Recursos
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- **Registro de Entregas**: Adicione e edite registros de entregas com facilidade
+- **Pesquisa**: Filtre as entregas por número de pedido
+- **Importação/Exportação**: Importe e exporte dados em formato CSV
+- **Análise de Dados**: Visualize estatísticas detalhadas das entregas
+  - Volume por dia da semana
+  - Valor médio por dia da semana
+  - Receita total por dia
+  - Tendências semanais
+  - Correlações entre valores e quantidades
+  - Estatísticas detalhadas com desvios padrão e variâncias
+  - Distribuição por faixas de valor
 
-**Use GitHub Codespaces**
+## Padrões de Arquitetura
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+O projeto utiliza vários padrões arquiteturais:
 
-## What technologies are used for this project?
+1. **Singleton**: Para serviços compartilhados (DeliveryService)
+2. **Componentização**: Componentes React isolados e reutilizáveis
+3. **Services**: Encapsulamento da lógica de negócio em serviços
+4. **Hooks**: Lógica de estado compartilhada via hooks personalizados
+5. **Utilities**: Funções utilitárias para cálculos e processamento de dados
 
-This project is built with:
+## Como Contribuir
 
-- Vite
-- TypeScript
+1. Clone o repositório
+2. Instale as dependências: `npm install`
+3. Execute o servidor de desenvolvimento: `npm run dev`
+4. Faça suas alterações respeitando a arquitetura do projeto
+5. Envie um pull request com suas melhorias
+
+## Tecnologias Utilizadas
+
 - React
-- shadcn-ui
+- TypeScript
 - Tailwind CSS
+- Shadcn UI (componentes)
+- Recharts (visualização de dados)
+- Date-fns (manipulação de datas)
 
-## How can I deploy this project?
+## Melhorias Futuras
 
-Simply open [Lovable](https://lovable.dev/projects/99646ccc-7bdb-4b75-8bff-29e4da5b7e04) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+- Implementação de testes automatizados
+- Persistência em banco de dados
+- Autenticação de usuários
+- Versão para dispositivos móveis como aplicativo nativo

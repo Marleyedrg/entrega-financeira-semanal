@@ -4,7 +4,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import TabNavigation from '@/components/tabs/TabNavigation';
 import TabContent from '@/components/tabs/TabContent';
 import { useDeliveries } from '@/hooks/useDeliveries';
-import { Delivery } from '@/types/Delivery';
+import { Delivery } from '@/types';
 
 const Index = () => {
   const { deliveries, addDelivery, deleteDelivery, clearDeliveries, importDeliveriesFromCSV } = useDeliveries();

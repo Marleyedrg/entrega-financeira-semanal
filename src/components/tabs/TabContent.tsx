@@ -1,12 +1,12 @@
 
 import React from 'react';
 import { TabsContent } from "@/components/ui/tabs";
-import DeliveryForm from '@/components/DeliveryForm';
-import DeliveryList from '@/components/DeliveryList';
-import DeliveryAnalytics from '@/components/DeliveryAnalytics';
-import SearchDeliveries from '@/components/SearchDeliveries';
-import FileOperations from '@/components/FileOperations';
-import { Delivery } from '@/types/Delivery';
+import DeliveryForm from '@/components/delivery/DeliveryForm';
+import DeliveryList from '@/components/delivery/DeliveryList';
+import DeliveryAnalytics from '@/components/analytics/DeliveryAnalytics';
+import SearchDeliveries from '@/components/search/SearchDeliveries';
+import FileOperations from '@/components/file-operations/FileOperations';
+import { Delivery } from '@/types';
 
 interface TabContentProps {
   deliveries: Delivery[];
