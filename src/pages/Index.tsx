@@ -1,11 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import DeliveryForm from '@/components/DeliveryForm';
-import DeliveryList from '@/components/DeliveryList';
-import DeliveryAnalytics from '@/components/DeliveryAnalytics';
-import SearchDeliveries from '@/components/SearchDeliveries';
-import FileOperations from '@/components/FileOperations';
+import MainLayout from '@/components/layout/MainLayout';
+import TabNavigation from '@/components/tabs/TabNavigation';
+import TabContent from '@/components/tabs/TabContent';
 import { useDeliveries } from '@/hooks/useDeliveries';
 import { Delivery } from '@/types/Delivery';
 
@@ -36,53 +33,25 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="bg-white p-4 rounded-lg shadow flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Registro de Entregas</h1>
-          <div className="text-xl font-semibold text-green-600">
-            Total: R$ {totalFees.toFixed(2)}
-          </div>
-        </div>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full bg-white border border-gray-200 p-1">
-            <TabsTrigger value="registros" className="flex-1">Registros de Entregas</TabsTrigger>
-            <TabsTrigger value="analise" className="flex-1">Análise de Dados</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="registros" className="space-y-6">
-            <DeliveryForm 
-              onSubmit={handleAddDelivery} 
-              editingDelivery={editingDelivery}
-              onCancelEdit={() => setEditingDelivery(null)}
-            />
-
-            <div className="flex gap-4 flex-col md:flex-row">
-              <SearchDeliveries 
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-              />
-              <FileOperations 
-                deliveries={deliveries}
-                onImport={importDeliveriesFromCSV}
-                onFinishWeek={clearDeliveries}
-              />
-            </div>
-
-            <DeliveryList 
-              deliveries={filteredDeliveries}
-              onDelete={deleteDelivery}
-              onEdit={handleEditDelivery}
-            />
-          </TabsContent>
-          
-          <TabsContent value="analise" className="bg-white rounded-lg shadow p-4">
-            <DeliveryAnalytics deliveries={deliveries} />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
+    <MainLayout title="Registro de Entregas" totalAmount={totalFees}>
+      <TabNavigation 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+      />
+      <TabContent 
+        deliveries={deliveries}
+        filteredDeliveries={filteredDeliveries}
+        editingDelivery={editingDelivery}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        onAddDelivery={handleAddDelivery}
+        onDeleteDelivery={deleteDelivery}
+        onEditDelivery={handleEditDelivery}
+        onCancelEdit={() => setEditingDelivery(null)}
+        onImport={importDeliveriesFromCSV}
+        onFinishWeek={clearDeliveries}
+      />
+    </MainLayout>
   );
 };
 
