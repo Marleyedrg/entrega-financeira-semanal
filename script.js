@@ -89,9 +89,8 @@ const renderTable = (items = deliveries) => {
     tbody.innerHTML = '';
 
     items.forEach(delivery => {
-        // Certifique-se de que a data seja interpretada corretamente
-        const date = new Date(delivery.date.includes('-') ? delivery.date : delivery.date.split('/').reverse().join('-'));
-        const formattedDate = `${String(date.getDate() + 1).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+        const date = new Date(delivery.date);
+        const formattedDate = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -128,13 +127,17 @@ const renderTable = (items = deliveries) => {
 deliveryForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
+    // Converter a data do formato dd/mm/aaaa para aaaa-mm-dd
+    const [day, month, year] = e.target.date.value.split('/');
+    const isoDate = `${year}-${month}-${day}`;
+
     const formData = {
         orderNumber: e.target.orderNumber.value,
         fee: e.target.fee.value ? parseFloat(e.target.fee.value) : null,
-        date: e.target.date.value, // Captura a data no formato ISO
+        date: new Date(isoDate + 'T00:00:00'), // Ajustar para meia-noite no horário local
         imageUrl: imagePreview.querySelector('img')?.src,
         id: editingId || Date.now().toString(),
-        weekday: getWeekdayName(e.target.date.value),
+        weekday: getWeekdayName(isoDate),
         timestamp: Date.now()
     };
 
@@ -148,7 +151,7 @@ deliveryForm.addEventListener('submit', (e) => {
     saveDeliveries();
     renderTable();
 
-    // Limpar apenas os campos necessários
+    // Limpar apenas os campos necessários, mantendo a data personalizada
     deliveryForm.orderNumber.value = '';
     deliveryForm.fee.value = '';
     imagePreview.innerHTML = '';
@@ -159,20 +162,19 @@ deliveryForm.addEventListener('submit', (e) => {
 window.addEventListener('DOMContentLoaded', () => {
     const dateField = document.getElementById('date');
     if (dateField && !dateField.value) {
-        const today = new Date().toISOString().split('T')[0]; // Formato ISO (aaaa-mm-dd)
-        dateField.value = today;
+        const today = new Date();
+        const formattedDate = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+        dateField.value = formattedDate; // Inicializar com a data atual no formato dd/mm/aaaa
     }
 });
 
 // Função para aplicar máscara de data no formato dd/mm/aaaa
 const applyDateMask = (input) => {
-    if (input.type !== 'date') { // Verifica se o campo não é do tipo "date"
-        input.value = input.value
-            .replace(/\D/g, '') // Remove caracteres não numéricos
-            .replace(/(\d{2})(\d)/, '$1/$2') // Adiciona a primeira barra
-            .replace(/(\d{2})(\d)/, '$1/$2') // Adiciona a segunda barra
-            .slice(0, 10); // Limita o tamanho a 10 caracteres
-    }
+    input.value = input.value
+        .replace(/\D/g, '') // Remove caracteres não numéricos
+        .replace(/(\d{2})(\d)/, '$1/$2') // Adiciona a primeira barra
+        .replace(/(\d{2})(\d)/, '$1/$2') // Adiciona a segunda barra
+        .slice(0, 10); // Limita o tamanho a 10 caracteres
 };
 
 // Adicionar evento de input para aplicar a máscara
@@ -267,22 +269,16 @@ csvInput.onchange = (e) => {
 
 const exportCSV = () => {
     const headers = ['Data', 'Número do Pedido', 'Taxa', 'Status'];
-    const csvContent = deliveries.map(d => {
-        const date = new Date(d.date.includes('-') ? d.date : d.date.split('/').reverse().join('-'));
-        const formattedDate = `${String(date.getDate() + 1).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
-        return [
-            formattedDate,
-            d.orderNumber,
-            d.fee?.toFixed(2) || '-',
-            d.fee ? 'Taxa Registrada' : 'Taxa Pendente'
-        ];
-    });
-
+    const csvContent = deliveries.map(d => [
+        formatDate(d.date),
+        d.orderNumber,
+        d.fee?.toFixed(2) || '-',
+        d.fee ? 'Taxa Registrada' : 'Taxa Pendente'
+    ]);
     const csv = [
         headers.join(','),
         ...csvContent.map(row => row.join(','))
     ].join('\n');
-
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
