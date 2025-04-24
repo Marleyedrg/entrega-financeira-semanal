@@ -1,31 +1,20 @@
 
 import React, { useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { Search, Import } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DeliveryForm from '@/components/DeliveryForm';
 import DeliveryList from '@/components/DeliveryList';
 import DeliveryAnalytics from '@/components/DeliveryAnalytics';
+import SearchDeliveries from '@/components/SearchDeliveries';
+import FileOperations from '@/components/FileOperations';
+import { useDeliveries } from '@/hooks/useDeliveries';
 import { Delivery } from '@/types/Delivery';
 
 const Index = () => {
-  const [deliveries, setDeliveries] = useState<Delivery[]>(() => {
-    const saved = localStorage.getItem('deliveries');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const { deliveries, addDelivery, deleteDelivery, clearDeliveries, importDeliveriesFromCSV } = useDeliveries();
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredDeliveries, setFilteredDeliveries] = useState<Delivery[]>([]);
   const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null);
   const [activeTab, setActiveTab] = useState("registros");
-
-  useEffect(() => {
-    localStorage.setItem('deliveries', JSON.stringify(deliveries));
-  }, [deliveries]);
 
   useEffect(() => {
     setFilteredDeliveries(
@@ -37,126 +26,13 @@ const Index = () => {
 
   const totalFees = deliveries.reduce((sum, delivery) => sum + (delivery.fee || 0), 0);
 
-  const { toast } = useToast();
-
   const handleAddDelivery = (newDelivery: Omit<Delivery, 'id'>) => {
-    if (editingDelivery) {
-      // Update existing delivery
-      setDeliveries(prev =>
-        prev.map(d => d.id === editingDelivery.id 
-          ? { ...newDelivery, id: editingDelivery.id } 
-          : d
-        )
-      );
-      setEditingDelivery(null);
-    } else {
-      // Add new delivery
-      const deliveryWithId = { ...newDelivery, id: uuidv4() };
-      setDeliveries(prev => [deliveryWithId, ...prev]);
-    }
+    addDelivery(newDelivery, editingDelivery);
+    setEditingDelivery(null);
   };
 
   const handleEditDelivery = (delivery: Delivery) => {
     setEditingDelivery(delivery);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingDelivery(null);
-  };
-
-  const handleDeleteDelivery = (id: string) => {
-    setDeliveries(prev => prev.filter(d => d.id !== id));
-  };
-
-  const handleImportCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const text = e.target?.result as string;
-        const lines = text.split('\n');
-        
-        // Skip header row and process data
-        const newDeliveries = lines.slice(1).map((line) => {
-          if (!line.trim()) return null; // Skip empty lines
-          
-          const [date, orderNumber, fee, status] = line.split(',');
-          
-          return {
-            id: uuidv4(),
-            date: format(new Date(date.split('/').reverse().join('-')), 'yyyy-MM-dd'),
-            orderNumber: orderNumber.trim(),
-            fee: fee.trim() !== '-' ? parseFloat(fee) : null,
-            isPending: status.trim() === 'Taxa Pendente',
-          };
-        }).filter((delivery): delivery is Delivery => delivery !== null);
-
-        setDeliveries(prev => [...newDeliveries, ...prev]);
-        toast({
-          title: "Importação concluída",
-          description: `${newDeliveries.length} entregas importadas com sucesso.`,
-        });
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Erro na importação",
-          description: "Formato do arquivo inválido. Certifique-se de usar um arquivo CSV válido.",
-        });
-      }
-    };
-
-    reader.readAsText(file);
-  };
-
-  const generateFileName = () => {
-    const currentDate = new Date();
-    const monthNames = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-    const month = monthNames[currentDate.getMonth()];
-    
-    // Calculate week number (1-4) within the month
-    const dayOfMonth = currentDate.getDate();
-    const weekNumber = Math.ceil(dayOfMonth / 7);
-
-    // Generate a consistent 4-digit number based on the deliveries data
-    const numberSeed = deliveries.reduce((acc, delivery) => {
-      // Use order number and amounts to generate a consistent hash
-      const value = delivery.orderNumber.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-      const feeValue = delivery.fee ? Math.floor(delivery.fee * 100) : 0;
-      return acc + value + feeValue;
-    }, 0);
-    
-    // Ensure it's always 4 digits by using modulo and padding
-    const fourDigitNumber = (numberSeed % 9000 + 1000).toString();
-    
-    return `${month}semana${weekNumber}_${fourDigitNumber}`;
-  };
-
-  const handleExportCSV = () => {
-    const headers = ['Data', 'Número do Pedido', 'Taxa', 'Status'];
-    const csvContent = deliveries.map(d => [
-      format(new Date(d.date), 'dd/MM/yyyy'),
-      d.orderNumber,
-      d.fee?.toFixed(2) || '-',
-      d.isPending ? 'Taxa Pendente' : 'Taxa Registrada'
-    ]);
-
-    const csvString = [
-      headers.join(','),
-      ...csvContent.map(row => row.join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `${generateFileName()}.csv`;
-    link.click();
-  };
-
-  const handleFinishWeek = () => {
-    handleExportCSV();
-    setDeliveries([]);
   };
 
   return (
@@ -179,47 +55,24 @@ const Index = () => {
             <DeliveryForm 
               onSubmit={handleAddDelivery} 
               editingDelivery={editingDelivery}
-              onCancelEdit={handleCancelEdit}
+              onCancelEdit={() => setEditingDelivery(null)}
             />
 
             <div className="flex gap-4 flex-col md:flex-row">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  className="pl-9"
-                  placeholder="Buscar por número do pedido..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => document.getElementById('csvInput')?.click()}
-                  className="flex items-center gap-2 md:w-auto w-full"
-                >
-                  <Import className="h-4 w-4" />
-                  Importar CSV
-                </Button>
-                <input
-                  id="csvInput"
-                  type="file"
-                  accept=".csv"
-                  className="hidden"
-                  onChange={handleImportCSV}
-                />
-                <Button
-                  onClick={handleFinishWeek}
-                  className="bg-green-600 hover:bg-green-700 md:w-auto w-full"
-                >
-                  Finalizar Semana
-                </Button>
-              </div>
+              <SearchDeliveries 
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+              />
+              <FileOperations 
+                deliveries={deliveries}
+                onImport={importDeliveriesFromCSV}
+                onFinishWeek={clearDeliveries}
+              />
             </div>
 
             <DeliveryList 
               deliveries={filteredDeliveries}
-              onDelete={handleDeleteDelivery}
+              onDelete={deleteDelivery}
               onEdit={handleEditDelivery}
             />
           </TabsContent>
