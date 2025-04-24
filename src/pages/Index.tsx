@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { Search, Import } from 'lucide-react';
@@ -6,8 +7,10 @@ import { ptBR } from 'date-fns/locale';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DeliveryForm from '@/components/DeliveryForm';
 import DeliveryList from '@/components/DeliveryList';
+import DeliveryAnalytics from '@/components/DeliveryAnalytics';
 import { Delivery } from '@/types/Delivery';
 
 const Index = () => {
@@ -18,6 +21,7 @@ const Index = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredDeliveries, setFilteredDeliveries] = useState<Delivery[]>([]);
   const [editingDelivery, setEditingDelivery] = useState<Delivery | null>(null);
+  const [activeTab, setActiveTab] = useState("registros");
 
   useEffect(() => {
     localStorage.setItem('deliveries', JSON.stringify(deliveries));
@@ -157,7 +161,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         <div className="bg-white p-4 rounded-lg shadow flex justify-between items-center">
           <h1 className="text-2xl font-bold">Registro de Entregas</h1>
           <div className="text-xl font-semibold text-green-600">
@@ -165,52 +169,65 @@ const Index = () => {
           </div>
         </div>
 
-        <DeliveryForm 
-          onSubmit={handleAddDelivery} 
-          editingDelivery={editingDelivery}
-          onCancelEdit={handleCancelEdit}
-        />
-
-        <div className="flex gap-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              className="pl-9"
-              placeholder="Buscar por número do pedido..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full bg-white border border-gray-200 p-1">
+            <TabsTrigger value="registros" className="flex-1">Registros de Entregas</TabsTrigger>
+            <TabsTrigger value="analise" className="flex-1">Análise de Dados</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="registros" className="space-y-6">
+            <DeliveryForm 
+              onSubmit={handleAddDelivery} 
+              editingDelivery={editingDelivery}
+              onCancelEdit={handleCancelEdit}
             />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => document.getElementById('csvInput')?.click()}
-              className="flex items-center gap-2"
-            >
-              <Import className="h-4 w-4" />
-              Importar CSV
-            </Button>
-            <input
-              id="csvInput"
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={handleImportCSV}
-            />
-            <Button
-              onClick={handleFinishWeek}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              Finalizar Semana
-            </Button>
-          </div>
-        </div>
 
-        <DeliveryList 
-          deliveries={filteredDeliveries}
-          onDelete={handleDeleteDelivery}
-          onEdit={handleEditDelivery}
-        />
+            <div className="flex gap-4 flex-col md:flex-row">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  className="pl-9"
+                  placeholder="Buscar por número do pedido..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => document.getElementById('csvInput')?.click()}
+                  className="flex items-center gap-2 md:w-auto w-full"
+                >
+                  <Import className="h-4 w-4" />
+                  Importar CSV
+                </Button>
+                <input
+                  id="csvInput"
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  onChange={handleImportCSV}
+                />
+                <Button
+                  onClick={handleFinishWeek}
+                  className="bg-green-600 hover:bg-green-700 md:w-auto w-full"
+                >
+                  Finalizar Semana
+                </Button>
+              </div>
+            </div>
+
+            <DeliveryList 
+              deliveries={filteredDeliveries}
+              onDelete={handleDeleteDelivery}
+              onEdit={handleEditDelivery}
+            />
+          </TabsContent>
+          
+          <TabsContent value="analise" className="bg-white rounded-lg shadow p-4">
+            <DeliveryAnalytics deliveries={deliveries} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
