@@ -114,11 +114,19 @@ const Index = () => {
     // Calculate week number (1-4) within the month
     const dayOfMonth = currentDate.getDate();
     const weekNumber = Math.ceil(dayOfMonth / 7);
+
+    // Generate a consistent 4-digit number based on the deliveries data
+    const numberSeed = deliveries.reduce((acc, delivery) => {
+      // Use order number and amounts to generate a consistent hash
+      const value = delivery.orderNumber.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+      const feeValue = delivery.fee ? Math.floor(delivery.fee * 100) : 0;
+      return acc + value + feeValue;
+    }, 0);
     
-    // Generate random 3-digit ID
-    const randomId = Math.floor(Math.random() * 900) + 100;
+    // Ensure it's always 4 digits by using modulo and padding
+    const fourDigitNumber = (numberSeed % 9000 + 1000).toString();
     
-    return `${month}semana${weekNumber}_${randomId}`;
+    return `${month}semana${weekNumber}_${fourDigitNumber}`;
   };
 
   const handleExportCSV = () => {
