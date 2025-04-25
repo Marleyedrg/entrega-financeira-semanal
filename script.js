@@ -244,10 +244,18 @@ const generateFileName = () => {
     const month = months[date.getMonth()];
     const weekNumber = Math.ceil(date.getDate() / 7);
 
-    sFinalId = `${weekNumber}${day}${month}`;
+    // Obter informações para o ID
+    const totalDeliveries = deliveries.length;
+    const firstDeliveryDate = deliveries.length > 0 ? deliveries[deliveries.length - 1].date : 'N/A';
+    const lastDeliveryDate = deliveries.length > 0 ? deliveries[0].date : 'N/A';
 
-    const binaryId = stringToBinaryId(sFinalId);
+    // Concatenar as informações
+    const idString = `${totalDeliveries}_${firstDeliveryDate}_${lastDeliveryDate}`;
 
+    // Transformar a string em binário
+    const binaryId = stringToBinaryId(idString);
+
+    // Retornar o nome do arquivo
     return `${month}semana${weekNumber}_${binaryId}`;
 };
 
