@@ -3,21 +3,20 @@ const DATA_DIR = 'data';
 const ANALYTICS_DIR = `${DATA_DIR}/analytics`;
 
 function stringToBinaryId(str) {
-    // Implementação simples de CRC4
     let crc = 0;
     for (let i = 0; i < str.length; i++) {
         crc ^= str.charCodeAt(i);
         for (let j = 0; j < 8; j++) {
             if (crc & 1) {
-                crc = (crc >>> 1) ^ 0xC;
+                crc = (crc >>> 1) ^ 0xC; // 0xC continua sendo o polinômio
             } else {
                 crc >>>= 1;
             }
         }
-        crc &= 0xF; // Mantém apenas 4 bits
     }
-    return crc.toString(2).padStart(4, '0');
+    return crc.toString(2).padStart(3, '0');// Sem padStart, mostrando todos os bits
 }
+
 
 // Garantir que os diretórios existam ao iniciar
 (function ensureDirectories() {
@@ -239,12 +238,13 @@ imageInput.onchange = (e) => {
 // CSV Import/Export
 const generateFileName = () => {
     const date = new Date();
+    const day = String(date.getDate()).padStart(2, '0');
     const months = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 
                    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
     const month = months[date.getMonth()];
     const weekNumber = Math.ceil(date.getDate() / 7);
 
-    sFinalId = `${month}semana${weekNumber}`;
+    sFinalId = `${weekNumber}${day}${month}`;
 
     const binaryId = stringToBinaryId(sFinalId);
 
