@@ -2,23 +2,6 @@
 const DATA_DIR = 'data';
 const ANALYTICS_DIR = `${DATA_DIR}/analytics`;
 
-function stringToBinaryId(str) {
-    // Implementação simples de CRC4
-    let crc = 0;
-    for (let i = 0; i < str.length; i++) {
-        crc ^= str.charCodeAt(i);
-        for (let j = 0; j < 8; j++) {
-            if (crc & 1) {
-                crc = (crc >>> 1) ^ 0xC;
-            } else {
-                crc >>>= 1;
-            }
-        }
-        crc &= 0xF; // Mantém apenas 4 bits
-    }
-    return crc.toString(2).padStart(4, '0');
-}
-
 // Garantir que os diretórios existam ao iniciar
 (function ensureDirectories() {
     try {
@@ -243,12 +226,8 @@ const generateFileName = () => {
                    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
     const month = months[date.getMonth()];
     const weekNumber = Math.ceil(date.getDate() / 7);
-
-    sFinalId = `${month}semana${weekNumber}`;
-
-    const binaryId = stringToBinaryId(sFinalId);
-
-    return `${month}semana${weekNumber}_${binaryId}`;
+    const randomId = Math.floor(Math.random() * 900) + 100;
+    return `${month}semana${weekNumber}_${randomId}`;
 };
 
 importButton.onclick = () => csvInput.click();
