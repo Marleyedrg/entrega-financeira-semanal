@@ -118,18 +118,16 @@ const saveDeliveries = () => {
 const uniqueOrderNumbers = new Set();
 
 // Render table
-const renderTable = (items = deliveries) => {
+const renderTable = async (items = deliveries) => {
     const tbody = deliveriesTable.querySelector('tbody');
     tbody.innerHTML = '';
 
-    items.forEach(delivery => {
-        // Certifique-se de que a data seja interpretada corretamente
-        const date = new Date(delivery.date.includes('-') ? delivery.date : delivery.date.split('/').reverse().join('-'));
-        const formattedDate = `${String(date.getDate() + 1).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+    for (const delivery of items) {
+        const imageData = delivery.imageId ? await getImageFromIndexedDB(delivery.imageId) : null;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${formattedDate}</td>
+            <td>${delivery.date}</td>
             <td>${delivery.orderNumber}</td>
             <td>${delivery.fee ? formatCurrency(delivery.fee) : '-'}</td>
             <td>
@@ -138,11 +136,12 @@ const renderTable = (items = deliveries) => {
                 </span>
             </td>
             <td>
-                ${delivery.imageUrl ? `
-                    <img src="${delivery.imageUrl}" 
+                ${imageData ? `
+                    <img src="${imageData}" 
                          alt="Comprovante" 
                          class="table-image"
-                         onclick="openModal('${delivery.imageUrl}')">
+                         loading="lazy"
+                         onclick="openModal('${imageData}')">
                 ` : ''}
             </td>
             <td class="table-actions">
@@ -155,7 +154,7 @@ const renderTable = (items = deliveries) => {
             </td>
         `;
         tbody.appendChild(tr);
-    });
+    }
 };
 
 // Form handling
@@ -186,11 +185,11 @@ deliveryForm.addEventListener('submit', (e) => {
     uniqueOrderNumbers.add(uniqueId);
 
     const formData = {
-        id: uniqueId, // Usar o ID único gerado
+        id: uniqueId,
         orderNumber,
         fee,
         date,
-        imageUrl,
+        imageId: deliveryForm.imageId || null, // Salvar apenas o ID da imagem
         weekday: getWeekdayName(date),
         timestamp: Date.now()
     };
@@ -264,18 +263,107 @@ window.onclick = (e) => {
 
 uploadButton.onclick = () => imageInput.click();
 
-imageInput.onchange = (e) => {
+imageInput.onchange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
+    if (file && file.type.startsWith('image/')) {
+        resizeImage(file, 800, 800, async (resizedDataUrl) => {
+            const imageId = Date.now().toString(); // Gerar um ID único para a imagem
+            await saveImageToIndexedDB(imageId, resizedDataUrl); // Salvar a imagem no IndexedDB
+
             imagePreview.innerHTML = `
-                <img src="${e.target.result}" alt="Preview">
+                <img src="${resizedDataUrl}" alt="Preview" style="max-width: 100%; height: auto;">
             `;
-        };
-        reader.readAsDataURL(file);
+
+            // Salvar apenas o ID da imagem no formulário ou no objeto de entrega
+            deliveryForm.imageId = imageId;
+        });
+    } else {
+        alert('Por favor, selecione um arquivo de imagem válido.');
     }
 };
+
+const dbName = 'imageDatabase';
+const storeName = 'images';
+
+// Inicializar o IndexedDB
+function initIndexedDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, 1);
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(storeName)) {
+                db.createObjectStore(storeName, { keyPath: 'id' });
+            }
+        };
+
+        request.onsuccess = (event) => {
+            resolve(event.target.result);
+        };
+
+        request.onerror = (event) => {
+            reject(event.target.error);
+        };
+    });
+}
+
+// Salvar imagem no IndexedDB
+async function saveImageToIndexedDB(id, imageData) {
+    const db = await initIndexedDB();
+    const transaction = db.transaction(storeName, 'readwrite');
+    const store = transaction.objectStore(storeName);
+    store.put({ id, imageData });
+
+    return new Promise((resolve, reject) => {
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = (event) => reject(event.target.error);
+    });
+}
+
+// Recuperar imagem do IndexedDB
+async function getImageFromIndexedDB(id) {
+    const db = await initIndexedDB();
+    const transaction = db.transaction(storeName, 'readonly');
+    const store = transaction.objectStore(storeName);
+
+    return new Promise((resolve, reject) => {
+        const request = store.get(id);
+        request.onsuccess = () => resolve(request.result?.imageData || null);
+        request.onerror = (event) => reject(event.target.error);
+    });
+}
+
+function resizeImage(file, maxWidth, maxHeight, callback) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            // Redimensionar mantendo a proporção
+            if (width > maxWidth) {
+                height = height * (maxWidth / width);
+                width = maxWidth;
+            }
+            if (height > maxHeight) {
+                width = width * (maxHeight / height);
+                height = maxHeight;
+            }
+
+            // Configurar o canvas para o novo tamanho
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+
+            // Converter o canvas para um Data URL (imagem redimensionada)
+            callback(canvas.toDataURL('image/jpeg', 0.7)); // Qualidade 70%
+        };
+        img.src = event.target.result; // Definir a imagem carregada no FileReader
+    };
+    reader.readAsDataURL(file); // Ler o arquivo como Data URL
+}
 
 // CSV Import/Export
 const generateFileName = () => {
@@ -521,6 +609,8 @@ window.editDelivery = (id) => {
     const delivery = deliveries.find(d => d.id === id);
     if (delivery) {
         editingId = id;
+
+        // Preencher os campos do formulário com os dados da entrega
         deliveryForm.orderNumber.value = delivery.orderNumber;
         deliveryForm.fee.value = delivery.fee || '';
         deliveryForm.date.value = delivery.date;
@@ -528,6 +618,16 @@ window.editDelivery = (id) => {
             imagePreview.innerHTML = `<img src="${delivery.imageUrl}" alt="Preview">`;
         }
         deliveryForm.querySelector('button[type="submit"]').textContent = 'Atualizar Pedido';
+
+        // Criar âncora para o campo do número do pedido
+        const orderNumberField = deliveryForm.orderNumber;
+        orderNumberField.classList.add('highlight'); // Adiciona uma classe para destacar o campo
+        orderNumberField.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Rola até o campo
+
+        // Remover o destaque após alguns segundos
+        setTimeout(() => {
+            orderNumberField.classList.remove('highlight');
+        }, 3000); // Remove a classe após 3 segundos
     }
 };
 
