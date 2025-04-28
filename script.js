@@ -14,8 +14,22 @@ function stringToBinaryId(str) {
             }
         }
     }
-    return crc.toString(2).padStart(3, '0');// Sem padStart, mostrando todos os bits
+    // Limitar o ID a 4 dígitos
+    return (crc & 0xFFFF).toString(16).padStart(4, '0'); // Retorna um ID hexadecimal de 4 dígitos
 }
+
+const backupData = () => {
+    if (deliveries.length === 0) {
+        alert("Não há entregas para fazer backup!");
+        return;
+    }
+
+    // Exportar os dados para CSV
+    exportCSV();
+
+    // Exibir uma mensagem de sucesso
+    alert("Backup realizado com sucesso! A planilha foi exportada.");
+};
 
 
 // Garantir que os diretórios existam ao iniciar
@@ -68,6 +82,8 @@ const finishWeekButton = document.getElementById('finishWeekButton');
 const analyticsFileSelect = document.getElementById('analyticsFileSelect');
 const tabButtons = document.querySelectorAll('.tab-button');
 const tabContents = document.querySelectorAll('.tab-content');
+const backupButton = document.getElementById('backupButton');
+backupButton.onclick = backupData;
 
 // Tab navigation
 tabButtons.forEach(button => {
@@ -98,6 +114,8 @@ const saveDeliveries = () => {
     localStorage.setItem('deliveries', JSON.stringify(deliveries));
     updateTotal();
 };
+
+const uniqueOrderNumbers = new Set();
 
 // Render table
 const renderTable = (items = deliveries) => {
@@ -144,13 +162,36 @@ const renderTable = (items = deliveries) => {
 deliveryForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
+    const orderNumber = e.target.orderNumber.value.trim();
+    const fee = e.target.fee.value ? parseFloat(e.target.fee.value) : null;
+    const date = e.target.date.value;
+    const imageUrl = imagePreview.querySelector('img')?.src || null;
+
+    // Criar um ID único com base na data, número do pedido e valor
+    const uniqueIdString = `${date}_${orderNumber}_${fee || '0.00'}`;
+    const uniqueId = stringToBinaryId(uniqueIdString);
+
+    // Verificar se o ID único já existe
+    if (uniqueOrderNumbers.has(uniqueId)) {
+        alert('Este pedido já foi registrado!');
+        // Limpar os campos do formulário
+        deliveryForm.orderNumber.value = '';
+        deliveryForm.fee.value = '';
+        deliveryForm.date.value = new Date().toISOString().split('T')[0];
+        imagePreview.innerHTML = '';
+        return;
+    }
+
+    // Adicionar o ID único ao Set
+    uniqueOrderNumbers.add(uniqueId);
+
     const formData = {
-        orderNumber: e.target.orderNumber.value,
-        fee: e.target.fee.value ? parseFloat(e.target.fee.value) : null,
-        date: e.target.date.value, // Captura a data no formato ISO
-        imageUrl: imagePreview.querySelector('img')?.src,
-        id: editingId || Date.now().toString(),
-        weekday: getWeekdayName(e.target.date.value),
+        id: uniqueId, // Usar o ID único gerado
+        orderNumber,
+        fee,
+        date,
+        imageUrl,
+        weekday: getWeekdayName(date),
         timestamp: Date.now()
     };
 
@@ -164,9 +205,10 @@ deliveryForm.addEventListener('submit', (e) => {
     saveDeliveries();
     renderTable();
 
-    // Limpar apenas os campos necessários
+    // Limpar os campos do formulário após o registro
     deliveryForm.orderNumber.value = '';
     deliveryForm.fee.value = '';
+    deliveryForm.date.value = new Date().toISOString().split('T')[0];
     imagePreview.innerHTML = '';
     e.target.querySelector('button[type="submit"]').textContent = 'Registrar Pedido';
 });
@@ -246,17 +288,22 @@ const generateFileName = () => {
 
     // Obter informações para o ID
     const totalDeliveries = deliveries.length;
-    const firstDeliveryDate = deliveries.length > 0 ? deliveries[deliveries.length - 1].date : 'N/A';
-    const lastDeliveryDate = deliveries.length > 0 ? deliveries[0].date : 'N/A';
+    const firstDeliveryInfo = deliveries.length > 0 ? `${deliveries[deliveries.length - 1].orderNumber}_${deliveries[deliveries.length - 1].fee || '0.00'}` : 'N/A';
+    const lastDeliveryInfo = deliveries.length > 0 ? `${deliveries[0].orderNumber}_${deliveries[0].fee || '0.00'}` : 'N/A';
 
-    // Concatenar as informações
-    const idString = `${totalDeliveries}_${firstDeliveryDate}_${lastDeliveryDate}`;
+    // Concatenar as informações para gerar o finalID
+    const idString = `${totalDeliveries}_${firstDeliveryInfo}_${lastDeliveryInfo}`;
+    const finalID = stringToBinaryId(idString); // Gera um ID único com base na string
 
-    // Transformar a string em binário
-    const binaryId = stringToBinaryId(idString);
+    // Retornar o nome do arquivo com o finalID
+    return `${month}semana${weekNumber}_${finalID}`;
+};
 
-    // Retornar o nome do arquivo
-    return `${month}semana${weekNumber}_${binaryId}`;
+// Função para ajustar a data ao fuso horário local
+const adjustDateToLocal = (dateString) => {
+    const date = new Date(dateString);
+    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    return localDate.toISOString().split('T')[0]; // Retorna apenas a parte da data no formato ISO
 };
 
 importButton.onclick = () => csvInput.click();
