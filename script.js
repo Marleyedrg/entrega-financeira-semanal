@@ -147,9 +147,10 @@ const renderTable = async (items = deliveries) => {
             <td>
                 ${delivery.imageId ? `
                     <img src="${await getImageFromIndexedDB(delivery.imageId)}" 
-                         alt="Comprovante" 
-                         class="table-image"
-                         loading="lazy">
+                        alt="Comprovante" 
+                        class="table-image"
+                        loading="lazy"
+                        onclick="openModal('${await getImageFromIndexedDB(delivery.imageId)}')">
                 ` : ''}
             </td>
             <td class="table-actions">
@@ -249,8 +250,13 @@ searchInput.addEventListener('input', (e) => {
 
 // Image handling
 function openModal(imageUrl) {
-    modalImage.src = imageUrl;
-    imageModal.style.display = 'block';
+    if (!imageUrl) {
+        alert('Imagem não encontrada!');
+        return;
+    }
+
+    modalImage.src = imageUrl; // Define a URL da imagem no modal
+    imageModal.style.display = 'block'; // Exibe o modal
 }
 
 closeModal.onclick = () => {
