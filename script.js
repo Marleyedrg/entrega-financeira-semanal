@@ -170,22 +170,19 @@ deliveryForm.addEventListener('submit', (e) => {
     const uniqueIdString = `${date}_${orderNumber}_${fee || '0.00'}`;
     const uniqueId = stringToBinaryId(uniqueIdString);
 
-    // Verificar se o ID único já existe
-    if (uniqueOrderNumbers.has(uniqueId)) {
+    // Verificar se o ID único já existe, ignorando o pedido que está sendo editado
+    if (!editingId && uniqueOrderNumbers.has(uniqueId)) {
         alert('Este pedido já foi registrado!');
-        // Limpar os campos do formulário
-        deliveryForm.orderNumber.value = '';
-        deliveryForm.fee.value = '';
-        deliveryForm.date.value = new Date().toISOString().split('T')[0];
-        imagePreview.innerHTML = '';
         return;
     }
 
     // Adicionar o ID único ao Set
-    uniqueOrderNumbers.add(uniqueId);
+    if (!editingId) {
+        uniqueOrderNumbers.add(uniqueId);
+    }
 
     const formData = {
-        id: uniqueId,
+        id: editingId || uniqueId, // Usar o ID existente ao editar
         orderNumber,
         fee,
         date,
@@ -195,9 +192,11 @@ deliveryForm.addEventListener('submit', (e) => {
     };
 
     if (editingId) {
+        // Atualizar o pedido existente
         deliveries = deliveries.map(d => d.id === editingId ? { ...formData } : d);
         editingId = null;
     } else {
+        // Adicionar um novo pedido
         deliveries.unshift(formData);
     }
 
@@ -270,6 +269,7 @@ imageInput.onchange = async (e) => {
             const imageId = Date.now().toString(); // Gerar um ID único para a imagem
             await saveImageToIndexedDB(imageId, resizedDataUrl); // Salvar a imagem no IndexedDB
 
+            // Exibir o preview da imagem
             imagePreview.innerHTML = `
                 <img src="${resizedDataUrl}" alt="Preview" style="max-width: 100%; height: auto;">
             `;
@@ -614,15 +614,21 @@ window.editDelivery = (id) => {
         deliveryForm.orderNumber.value = delivery.orderNumber;
         deliveryForm.fee.value = delivery.fee || '';
         deliveryForm.date.value = delivery.date;
-        if (delivery.imageUrl) {
-            imagePreview.innerHTML = `<img src="${delivery.imageUrl}" alt="Preview">`;
+        if (delivery.imageId) {
+            getImageFromIndexedDB(delivery.imageId).then(imageData => {
+                imagePreview.innerHTML = `<img src="${imageData}" alt="Preview">`;
+            });
         }
         deliveryForm.querySelector('button[type="submit"]').textContent = 'Atualizar Pedido';
 
         // Criar âncora para o campo do número do pedido
         const orderNumberField = deliveryForm.orderNumber;
         orderNumberField.classList.add('highlight'); // Adiciona uma classe para destacar o campo
-        orderNumberField.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Rola até o campo
+
+        // Garantir que a rolagem funcione em todos os dispositivos
+        setTimeout(() => {
+            orderNumberField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
 
         // Remover o destaque após alguns segundos
         setTimeout(() => {
