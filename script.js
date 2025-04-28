@@ -123,34 +123,38 @@ const renderTable = async (items = deliveries) => {
     tbody.innerHTML = '';
 
     for (const delivery of items) {
-        const imageData = delivery.imageId ? await getImageFromIndexedDB(delivery.imageId) : null;
+        // Criar a data sem aplicar o ajuste de fuso horário
+        const [year, month, day] = delivery.date.split('-'); // Supondo formato ISO (aaaa-mm-dd)
+        const adjustedDate = new Date(year, month - 1, day); // Mês começa em 0
+
+        // Formatar a data no formato "dd / mm / aaaa" usando toLocaleDateString
+        const formattedDate = adjustedDate.toLocaleDateString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        }).replace(/\//g, ' / '); // Adiciona espaços ao redor das barras
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${delivery.date}</td>
-            <td>${delivery.orderNumber}</td>
-            <td>${delivery.fee ? formatCurrency(delivery.fee) : '-'}</td>
-            <td>
+            <td class="table-date">${formattedDate}</td>
+            <td class="table-number">${delivery.orderNumber}</td>
+            <td class="table-value">${delivery.fee ? `R$ ${formatCurrency(delivery.fee)}` : '-'}</td>
+            <td class="table-status">
                 <span class="status-badge ${delivery.fee ? 'status-completed' : 'status-pending'}">
                     ${delivery.fee ? 'Taxa Registrada' : 'Taxa Pendente'}
                 </span>
             </td>
             <td>
-                ${imageData ? `
-                    <img src="${imageData}" 
+                ${delivery.imageId ? `
+                    <img src="${await getImageFromIndexedDB(delivery.imageId)}" 
                          alt="Comprovante" 
                          class="table-image"
-                         loading="lazy"
-                         onclick="openModal('${imageData}')">
+                         loading="lazy">
                 ` : ''}
             </td>
             <td class="table-actions">
-                <button onclick="editDelivery('${delivery.id}')" class="button outline">
-                    Editar
-                </button>
-                <button onclick="deleteDelivery('${delivery.id}')" class="button outline">
-                    Excluir
-                </button>
+                <button onclick="editDelivery('${delivery.id}')" class="button outline">Editar</button>
+                <button onclick="deleteDelivery('${delivery.id}')" class="button outline">Excluir</button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -163,7 +167,7 @@ deliveryForm.addEventListener('submit', (e) => {
 
     const orderNumber = e.target.orderNumber.value.trim();
     const fee = e.target.fee.value ? parseFloat(e.target.fee.value) : null;
-    const date = e.target.date.value;
+    const date = e.target.date.value; // Mantém a data inserida
     const imageUrl = imagePreview.querySelector('img')?.src || null;
 
     // Criar um ID único com base na data, número do pedido e valor
@@ -206,7 +210,6 @@ deliveryForm.addEventListener('submit', (e) => {
     // Limpar os campos do formulário após o registro
     deliveryForm.orderNumber.value = '';
     deliveryForm.fee.value = '';
-    deliveryForm.date.value = new Date().toISOString().split('T')[0];
     imagePreview.innerHTML = '';
     e.target.querySelector('button[type="submit"]').textContent = 'Registrar Pedido';
 });
@@ -369,7 +372,7 @@ function resizeImage(file, maxWidth, maxHeight, callback) {
 const generateFileName = () => {
     const date = new Date();
     const day = String(date.getDate()).padStart(2, '0');
-    const months = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 
+    const months = ['janeiro', 'fevereiro', 'maio', 'junho', 
                    'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
     const month = months[date.getMonth()];
     const weekNumber = Math.ceil(date.getDate() / 7);
