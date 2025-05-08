@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Sistema de Entregas</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles/index.css">
     <!-- Preload de fontes para melhor desempenho -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -121,91 +121,94 @@
         </div>
 
         <div id="analytics" class="tab-content">
-    <div class="analytics-header">
-        <h2>Análise de Dados</h2>
-        <div class="analytics-actions">
-            <input type="file" id="analyticsCSVInput" accept=".csv" class="hidden">
-            <button id="importAnalyticsButton" class="button primary">Importar CSV para análise</button>
-            <button id="clearAnalyticsButton" class="button outline">Limpar Análise</button>
-        </div>
-    </div>
-    
-    <div class="analytics-dashboard">
-        <!-- Resumo Financeiro -->
-        <div class="analytics-card">
-            <h3>Resumo Financeiro</h3>
-            <div class="summary-container" id="financialSummary">
-                <p class="empty-state">Importe um arquivo CSV para visualizar os dados</p>
+            <div class="analytics-header">
+                <h2>Análise de Dados</h2>
             </div>
-        </div>
+            
+            <div class="analytics-dashboard">
+                <!-- Resumo Financeiro -->
+                <div class="analytics-card">
+                    <h3>Resumo Financeiro</h3>
+                    <div class="summary-container" id="financialSummary">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
 
-        <!-- Gráfico de Receitas vs Despesas -->
-        <div class="analytics-card">
-            <h3>Receitas vs Despesas</h3>
-            <div class="chart-container" id="revenueExpenseChart">
-                <p class="empty-state">Importe um arquivo CSV para visualizar os dados</p>
-            </div>
-        </div>
+                <!-- Gráfico de Receitas vs Despesas -->
+                <div class="analytics-card">
+                    <h3>Receitas vs Despesas</h3>
+                    <div class="chart-container" id="revenueExpenseChart">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
 
-        <!-- Entregas por Dia da Semana -->
-        <div class="analytics-card">
-            <h3>Entregas por Dia da Semana</h3>
-            <div class="chart-container" id="weekdayChart">
-                <p class="empty-state">Importe um arquivo CSV para visualizar os dados</p>
-            </div>
-        </div>
+                <!-- Entregas por Dia da Semana -->
+                <div class="analytics-card">
+                    <h3>Entregas por Dia da Semana</h3>
+                    <div class="chart-container" id="weekdayChart">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
 
-        <!-- Gastos com Gasolina -->
-        <div class="analytics-card">
-            <h3>Gastos com Gasolina</h3>
-            <div class="chart-container" id="gasExpenseChart">
-                <p class="empty-state">Importe um arquivo CSV para visualizar os dados</p>
-            </div>
-        </div>
+                <!-- Gastos com Gasolina -->
+                <div class="analytics-card">
+                    <h3>Gastos com Gasolina</h3>
+                    <div class="chart-container" id="gasExpenseChart">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
 
-        <!-- Métricas de Desempenho -->
-        <div class="analytics-card">
-            <h3>Métricas de Desempenho</h3>
-            <div class="summary-container" id="performanceMetrics">
-                <p class="empty-state">Importe um arquivo CSV para visualizar os dados</p>
-            </div>
-        </div>
+                <!-- Métricas de Desempenho -->
+                <div class="analytics-card">
+                    <h3>Métricas de Desempenho</h3>
+                    <div class="summary-container" id="performanceMetrics">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
 
-        <!-- Dia com Mais Entregas -->
-        <div class="analytics-card">
-            <h3>Dia com Mais Entregas</h3>
-            <div class="summary-container" id="peakDay">
-                <p class="empty-state">Importe um arquivo CSV para visualizar os dados</p>
-            </div>
-        </div>
+                <!-- Dia com Mais Entregas -->
+                <div class="analytics-card">
+                    <h3>Dia com Mais Entregas</h3>
+                    <div class="summary-container" id="peakDay">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
 
-        <!-- Histórico de Entregas -->
-        <div class="analytics-card">
-            <h3>Histórico de Entregas</h3>
-            <div class="chart-container" id="deliveryHistory">
-                <p class="empty-state">Importe um arquivo CSV para visualizar os dados</p>
-            </div>
-        </div>
+                <!-- Histórico de Entregas -->
+                <div class="analytics-card">
+                    <h3>Histórico de Entregas</h3>
+                    <div class="chart-container" id="deliveryHistory">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
 
-        <!-- Tendências -->
-        <div class="analytics-card">
-            <h3>Tendências</h3>
-            <div class="summary-container" id="trends">
-                <p class="empty-state">Importe um arquivo CSV para visualizar os dados</p>
+                <!-- Tendências -->
+                <div class="analytics-card">
+                    <h3>Tendências</h3>
+                    <div class="summary-container" id="trends">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
+
+                <!-- Evolução do Lucro -->
+                <div class="analytics-card">
+                    <h3>Evolução do Lucro</h3>
+                    <div class="chart-container" id="profitEvolutionChart">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-</div>
     </div>
 
     <!-- Modal para visualização de imagem em alta resolução -->
     <div id="imageModal" class="modal">
         <div class="modal-content">
             <span class="close">&times;</span>
-            <img id="modalImage" src="/placeholder.svg" alt="Comprovante em alta resolução">
+            <img id="modalImage" alt="Comprovante em alta resolução">
         </div>
     </div>
 
-    <script src="script.js" defer></script>
+    <script src="scripts/main.js" type="module" defer></script>
 </body>
 </html>

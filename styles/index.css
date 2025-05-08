@@ -1,0 +1,7 @@
+/* Import all CSS files */
+@import 'base.css';
+@import 'components.css';
+@import 'layout.css';
+@import 'tables.css';
+@import 'charts.css';
+@import 'responsive.css'; 

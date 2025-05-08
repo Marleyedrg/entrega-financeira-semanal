@@ -1,0 +1,110 @@
+/* Table Container */
+.table-container {
+  overflow-x: auto;
+  margin: 20px 0;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Table Styles */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+}
+
+td {
+  color: #666;
+}
+
+/* Table Images */
+.table-image {
+  max-width: 100px;
+  max-height: 100px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: transform 0.2s;
+}
+
+.table-image:hover {
+  transform: scale(1.1);
+}
+
+/* Table Actions */
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Table Text Styles */
+.table-date {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.table-number {
+  font-size: var(--font-size-md);
+  font-weight: bold;
+  color: #1d4ed8;
+}
+
+.table-value {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--primary-color);
+}
+
+.table-status {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+}
+
+.status-completed {
+  color: var(--primary-color);
+  background-color: #d1fae5;
+}
+
+.status-pending {
+  color: #d97706;
+  background-color: #fef3c7;
+}
+
+/* Edit Button */
+.edit-button {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.edit-button:hover {
+  background-color: #2563eb;
+}
+
+.edit-button:active {
+  background-color: #1d4ed8;
+} 
