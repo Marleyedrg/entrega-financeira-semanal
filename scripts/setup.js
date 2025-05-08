@@ -10,7 +10,7 @@ import {
   deleteGasEntry,
   isEditing
 } from './data.js';
-import { finishWeek, backupData } from './export.js';
+import { finishWeek, backupData, clearAllData } from './export.js';
 import { importCSV } from './import.js';
 
 // Função para manipular o envio do formulário de entregas
@@ -126,6 +126,12 @@ export function setupEditForms() {
   if (backupButton) {
     backupButton.addEventListener('click', backupData);
     backupButton.title = "Fazer backup sem limpar os dados";
+  }
+
+  const clearDataButton = document.getElementById('clearDataButton');
+  if (clearDataButton) {
+    clearDataButton.addEventListener('click', clearAllData);
+    clearDataButton.title = "Limpar todos os dados sem exportá-los";
   }
 
   const importButton = document.getElementById('importButton');
