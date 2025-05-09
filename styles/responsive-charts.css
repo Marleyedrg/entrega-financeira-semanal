@@ -1,0 +1,242 @@
+/* Responsive Chart Styles */
+
+/* Common fixes for all devices */
+.pie-label {
+  z-index: 2;
+}
+
+.bar-value {
+  z-index: 2;
+}
+
+.highlight {
+  display: inline-block;
+  margin: 2px 0;
+}
+
+/* Mobile First (Small Screens) */
+@media (max-width: 480px) {
+  /* Chart container fixes */
+  .chart-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--spacing-3);
+    height: auto;
+    min-height: 200px;
+    margin-bottom: 2rem; /* Add bottom margin to prevent content overlap */
+  }
+  
+  /* Pie Chart Mobile Optimization */
+  .pie-chart {
+    width: 150px;
+    height: 150px;
+    margin: 0 auto 40px auto; /* Add bottom margin to prevent label overlap */
+    transform: translateZ(0); /* Force GPU acceleration */
+  }
+
+  .pie-label {
+    position: relative;
+    bottom: auto;
+    margin-top: 45px;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-2);
+  }
+
+  .pie-label-item {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  /* Bar Chart Mobile Optimization */
+  .bar-chart {
+    height: 150px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 30px; /* Space for labels */
+    justify-content: flex-start;
+    min-width: 500px;
+  }
+  
+  .bar {
+    min-width: 20px; /* Ensure bars are visible */
+  }
+  
+  .bar-value {
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+  }
+  
+  .bar-label {
+    font-size: var(--font-size-xs);
+    white-space: nowrap;
+  }
+
+  /* Horizontal Bar Chart Optimization */
+  .horizontal-bar-chart {
+    gap: var(--spacing-2);
+  }
+
+  .horizontal-bar {
+    padding: var(--spacing-1);
+  }
+
+  .horizontal-bar-label {
+    width: 60px;
+    font-size: 0.6875rem;
+  }
+
+  .horizontal-bar-value {
+    width: 60px;
+    font-size: 0.6875rem;
+    text-align: right;
+  }
+
+  /* Line Chart Optimization */
+  .line-chart-container {
+    flex-direction: column;
+    height: auto;
+    padding: var(--spacing-3);
+    overflow-x: auto;
+  }
+
+  .line-chart-y-axis {
+    flex-direction: row;
+    width: 100%;
+    height: 20px;
+    padding-right: 0;
+    padding-bottom: 5px;
+    justify-content: space-between;
+  }
+
+  .line-chart {
+    height: 180px;
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+    min-width: 500px; /* For better viewing of chart data */
+  }
+
+  .line-chart-x-labels {
+    overflow-x: visible;
+    justify-content: space-around;
+    padding-bottom: 20px;
+  }
+
+  .line-chart-x-label {
+    position: relative;
+    transform: none;
+    margin-right: 0;
+    font-size: 0.6875rem;
+    text-align: center;
+    max-width: 50px;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  /* Fix for peak day display */
+  .peak-days-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-3);
+  }
+
+  .peak-day-card {
+    padding: var(--spacing-3);
+  }
+
+  /* Profit evolution chart fixes */
+  #profitEvolutionChart .line-chart {
+    min-width: 500px;
+  }
+  
+  /* Fix for trends section */
+  #trends {
+    padding: var(--spacing-3);
+  }
+  
+  #trends p {
+    margin-bottom: var(--spacing-3);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  /* Metric grid optimization */
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-3);
+    flex-wrap: wrap;
+  }
+
+  .metric-value {
+    font-size: var(--font-size-md);
+    word-break: break-word;
+  }
+
+  .metric-label {
+    font-size: var(--font-size-xs);
+    word-break: break-word;
+  }
+}
+
+/* Tablet Styles */
+@media (min-width: 481px) and (max-width: 768px) {
+  .chart-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pie-chart {
+    margin: 0 auto 40px auto;
+  }
+
+  .pie-label {
+    position: relative;
+    bottom: auto;
+    margin-top: 45px;
+  }
+
+  .bar-chart {
+    min-width: 500px;
+  }
+
+  .line-chart {
+    min-width: 500px;
+  }
+
+  .peak-days-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Medium Screens */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .chart-container {
+    overflow-x: auto;
+  }
+}
+
+/* Safari and iOS specific fixes */
+@supports (-webkit-touch-callout: none) {
+  .pie-chart {
+    transform: translateZ(0); /* Force hardware acceleration */
+  }
+  
+  .bar-chart, 
+  .line-chart {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Performance optimizations for all devices */
+.is-scrolling .bar-chart,
+.is-scrolling .pie-chart,
+.is-scrolling .line-chart {
+  will-change: transform;
+}
+
+.reduce-motion .pie-chart,
+.reduce-motion .bar-chart,
+.reduce-motion .line-chart {
+  transition-duration: 0.05s !important;
+  animation-duration: 0.05s !important;
+} 

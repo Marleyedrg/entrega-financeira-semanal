@@ -4,4 +4,92 @@
 @import 'layout.css';
 @import 'tables.css';
 @import 'charts.css';
-@import 'responsive.css'; 
+@import 'mobile.css';
+@import 'responsive-charts.css';
+/* Note: responsive.css has been replaced by more specific files above */
+
+/* Custom variables */
+:root {
+  --app-height: 100vh;
+}
+
+/* Performance optimizations */
+.resize-transition-stopper * {
+  transition: none !important;
+  animation: none !important;
+}
+
+.is-scrolling .bar-chart,
+.is-scrolling .pie-chart,
+.is-scrolling .line-chart {
+  will-change: transform;
+}
+
+.reduce-motion * {
+  transition-duration: 0.05s !important;
+  animation-duration: 0.05s !important;
+}
+
+/* Fix for 100vh on mobile browsers */
+.container {
+  min-height: var(--app-height);
+}
+
+/* Fix for overlapping elements */
+.pie-label {
+  z-index: 2;
+}
+
+.bar-value {
+  z-index: 2;
+}
+
+/* Prevent text overlap */
+.highlight {
+  display: inline-block;
+  margin: 2px 0;
+}
+
+/* Ensure tables are more responsive */
+@media (max-width: 480px) {
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Prevent long content from breaking layout */
+  td {
+    word-break: break-word;
+    max-width: 100vw;
+  }
+  
+  /* Ensure modals work properly on small screens */
+  .modal-content {
+    width: 90vw;
+    max-height: 80vh;
+  }
+  
+  /* Fix for charts in mobile view */
+  .chart-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 2rem;
+  }
+  
+  /* Allow flex wrap for better mobile display */
+  .peak-days-grid,
+  .metric-grid,
+  .pie-label {
+    flex-wrap: wrap;
+  }
+}
+
+/* Fix for long text in smaller screens */
+@media (max-width: 768px) {
+  body {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+}
+
+/* Any additional global styles that don't fit in other files */ 

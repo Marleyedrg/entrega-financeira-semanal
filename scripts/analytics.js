@@ -1,5 +1,14 @@
 import { formatCurrency, formatDate, getWeekdayName } from './utils.js';
 import { deliveries, gasEntries } from './data.js';
+import { 
+  generateLinePath, 
+  generateDataPoints, 
+  getBestProfitDay, 
+  getWorstProfitDay,
+  optimizeChartRendering,
+  makeChartResponsive,
+  adjustChartSize
+} from './charts.js';
 
 // Função principal de renderização de análises
 export function renderAnalytics() {
@@ -16,6 +25,17 @@ export function renderAnalytics() {
   renderDeliveryHistory();
   renderTrends();
   renderProfitEvolution();
+  
+  // Apply optimizations to all chart containers after rendering
+  const chartContainers = document.querySelectorAll('.chart-container');
+  chartContainers.forEach(container => {
+    optimizeChartRendering(container);
+    makeChartResponsive(container);
+  });
+  
+  // Add specific optimizations for chart types
+  adjustChartSize("revenueExpenseChart", { mobileWidth: 150, mobileHeight: 150 });
+  adjustChartSize("profitEvolutionChart", { mobileWidth: 180, mobileHeight: 180 });
 }
 
 // Função para renderizar análise por dia da semana
@@ -40,24 +60,33 @@ function renderWeekdayAnalysis() {
 
   // Renderizar gráfico de barras para entregas por dia da semana
   const weekdayChartElement = document.getElementById("weekdayChart");
+  const maxCount = Math.max(...Object.values(weekdayCounts), 1); // Evitar divisão por zero
+  
   weekdayChartElement.innerHTML = `
-    <div class="bar-chart">
-      ${Object.entries(weekdayCounts)
-        .map(([day, count]) => `
-          <div class="bar" style="height: ${count ? Math.max((count / Math.max(...Object.values(weekdayCounts))) * 180, 10) : 0}px">
-            <div class="bar-value">${count}</div>
-            <div class="bar-label">${day.substring(0, 3)}</div>
-          </div>
-        `)
-        .join("")}
+    <div class="chart-container">
+      <div class="bar-chart">
+        ${Object.entries(weekdayCounts)
+          .map(([day, count]) => `
+            <div class="bar" style="height: ${count ? Math.max((count / maxCount) * 150, 10) : 0}px">
+              <div class="bar-value">${count}</div>
+              <div class="bar-label">${day.substring(0, 3)}</div>
+            </div>
+          `)
+          .join("")}
+      </div>
     </div>
   `;
 
   // Análise de dias de pico
   const sortedDays = Object.entries(weekdayCounts).sort((a, b) => b[1] - a[1]);
   const peakDay = sortedDays[0];
-  const worstDay = sortedDays.find(day => day[1] > 0) || sortedDays[sortedDays.length - 1];
+  
+  // Encontrar o pior dia que tenha pelo menos uma entrega
+  const activeDays = sortedDays.filter(day => day[1] > 0);
+  const worstDay = activeDays.length > 0 ? activeDays[activeDays.length - 1] : sortedDays[sortedDays.length - 1];
+  
   const peakDayElement = document.getElementById("peakDay");
+  const totalDeliveries = deliveries.length || 1; // Evitar divisão por zero
 
   if (peakDay && peakDay[1] > 0) {
     peakDayElement.innerHTML = `
@@ -65,13 +94,13 @@ function renderWeekdayAnalysis() {
         <div class="peak-day-card">
           <h4>Melhor Dia</h4>
           <p>O dia com maior número de entregas foi <span class="highlight">${peakDay[0]}</span> com <span class="highlight">${peakDay[1]} ${peakDay[1] === 1 ? 'entrega' : 'entregas'}</span>.</p>
-          <p>Isso representa <span class="highlight">${Math.round((peakDay[1] / deliveries.length) * 100)}%</span> do total de entregas.</p>
+          <p>Isso representa <span class="highlight">${Math.round((peakDay[1] / totalDeliveries) * 100)}%</span> do total de entregas.</p>
           <p>Valor arrecadado neste dia: <span class="highlight">R$ ${formatCurrency(weekdayFees[peakDay[0]])}</span></p>
         </div>
         <div class="peak-day-card">
           <h4>Dia Mais Fraco</h4>
           <p>O dia com menor número de entregas foi <span class="highlight">${worstDay[0]}</span> com <span class="highlight">${worstDay[1]} ${worstDay[1] === 1 ? 'entrega' : 'entregas'}</span>.</p>
-          <p>Isso representa <span class="highlight">${Math.round((worstDay[1] / deliveries.length) * 100)}%</span> do total de entregas.</p>
+          <p>Isso representa <span class="highlight">${Math.round((worstDay[1] / totalDeliveries) * 100)}%</span> do total de entregas.</p>
           <p>Valor arrecadado neste dia: <span class="highlight">R$ ${formatCurrency(weekdayFees[worstDay[0]])}</span></p>
         </div>
       </div>
@@ -132,21 +161,32 @@ function renderRevenueExpenseChart() {
   const totalFees = deliveries.reduce((sum, d) => sum + (parseFloat(d.fee) || 0), 0);
   const totalGas = gasEntries.reduce((sum, g) => sum + (parseFloat(g.amount) || 0), 0);
   const totalAmount = totalFees + totalGas;
-  const feesPercentage = totalAmount > 0 ? (totalFees / totalAmount) * 100 : 0;
-  const gasPercentage = totalAmount > 0 ? (totalGas / totalAmount) * 100 : 0;
+  
+  // Verifique se há dados significativos antes de calcular percentuais
+  if (totalAmount <= 0) {
+    document.getElementById("revenueExpenseChart").innerHTML = `
+      <p class="empty-state">Não há dados suficientes para análise de receitas vs despesas</p>
+    `;
+    return;
+  }
+  
+  const feesPercentage = (totalFees / totalAmount) * 100;
+  const gasPercentage = (totalGas / totalAmount) * 100;
 
   const revenueExpenseChartElement = document.getElementById("revenueExpenseChart");
   revenueExpenseChartElement.innerHTML = `
-    <div class="pie-chart" style="background-image: conic-gradient(#16a34a 0% ${feesPercentage}%, #dc2626 ${feesPercentage}% 100%);">
-    </div>
-    <div class="pie-label">
-      <div class="pie-label-item">
-        <span class="pie-color" style="background-color: #16a34a;"></span>
-        <span>Taxas: ${feesPercentage.toFixed(1)}%</span>
+    <div class="chart-container">
+      <div class="pie-chart" style="background-image: conic-gradient(#16a34a 0% ${feesPercentage}%, #dc2626 ${feesPercentage}% 100%);">
       </div>
-      <div class="pie-label-item">
-        <span class="pie-color" style="background-color: #dc2626;"></span>
-        <span>Gasolina: ${gasPercentage.toFixed(1)}%</span>
+      <div class="pie-label">
+        <div class="pie-label-item">
+          <span class="pie-color" style="background-color: #16a34a;"></span>
+          <span>Taxas: ${feesPercentage.toFixed(1)}%</span>
+        </div>
+        <div class="pie-label-item">
+          <span class="pie-color" style="background-color: #dc2626;"></span>
+          <span>Gasolina: ${gasPercentage.toFixed(1)}%</span>
+        </div>
       </div>
     </div>
   `;
@@ -174,22 +214,24 @@ function renderGasExpenseChart() {
   });
 
   gasExpenseChartElement.innerHTML = `
-    <div class="horizontal-bar-chart">
-      ${sortedGasDates
-        .map(([date, amount]) => {
-          const maxAmount = Math.max(...Object.values(gasByDate));
-          const percentage = (amount / maxAmount) * 100;
-          return `
-            <div class="horizontal-bar">
-              <div class="horizontal-bar-label">${date}</div>
-              <div class="horizontal-bar-track">
-                <div class="horizontal-bar-fill" style="width: ${percentage}%"></div>
+    <div class="chart-container">
+      <div class="horizontal-bar-chart">
+        ${sortedGasDates
+          .map(([date, amount]) => {
+            const maxAmount = Math.max(...Object.values(gasByDate), 1); // Evitar divisão por zero
+            const percentage = (amount / maxAmount) * 100;
+            return `
+              <div class="horizontal-bar">
+                <div class="horizontal-bar-label">${date}</div>
+                <div class="horizontal-bar-track">
+                  <div class="horizontal-bar-fill" style="width: ${percentage}%"></div>
+                </div>
+                <div class="horizontal-bar-value">R$ ${formatCurrency(amount)}</div>
               </div>
-              <div class="horizontal-bar-value">R$ ${formatCurrency(amount)}</div>
-            </div>
-          `;
-        })
-        .join("")}
+            `;
+          })
+          .join("")}
+      </div>
     </div>
   `;
 }
@@ -239,279 +281,241 @@ function renderPerformanceMetrics() {
 
 // Função para renderizar histórico de entregas
 function renderDeliveryHistory() {
-  const dateCount = {};
-  const dateFees = {};
-
+  const deliveryHistoryElement = document.getElementById("deliveryHistory");
+  
+  if (deliveries.length === 0) {
+    deliveryHistoryElement.innerHTML = '<p class="empty-state">Nenhuma entrega registrada no período</p>';
+    return;
+  }
+  
+  // Agrupar entregas por data
+  const entriesByDate = {};
   deliveries.forEach((delivery) => {
     const formattedDate = formatDate(delivery.date);
-    dateCount[formattedDate] = (dateCount[formattedDate] || 0) + 1;
-    if (delivery.fee) {
-      dateFees[formattedDate] = (dateFees[formattedDate] || 0) + Number.parseFloat(delivery.fee);
+    if (!entriesByDate[formattedDate]) {
+      entriesByDate[formattedDate] = {
+        count: 0,
+        total: 0,
+      };
     }
+    entriesByDate[formattedDate].count += 1;
+    entriesByDate[formattedDate].total += parseFloat(delivery.fee) || 0;
   });
-
-  const deliveryHistoryElement = document.getElementById("deliveryHistory");
-
-  if (Object.keys(dateCount).length > 1) {
-    const sortedDates = Object.entries(dateCount).sort((a, b) => {
-      const dateA = new Date(a[0].split("/").reverse().join("-"));
-      const dateB = new Date(b[0].split("/").reverse().join("-"));
-      return dateA - dateB;
-    });
-
-    deliveryHistoryElement.innerHTML = `
+  
+  // Ordenar datas
+  const sortedDates = Object.keys(entriesByDate).sort((a, b) => {
+    const dateA = new Date(a.split("/").reverse().join("-"));
+    const dateB = new Date(b.split("/").reverse().join("-"));
+    return dateA - dateB;
+  });
+  
+  // Limitar a exibição a no máximo 10 datas para evitar sobrecarga visual
+  const displayDates = sortedDates.length > 10 ? sortedDates.slice(-10) : sortedDates;
+  
+  const maxCount = Math.max(...Object.values(entriesByDate).map(entry => entry.count), 1);
+  
+  deliveryHistoryElement.innerHTML = `
+    <div class="chart-container">
       <div class="bar-chart">
-        ${sortedDates
-          .slice(0, 7)
-          .map(([date, count]) => {
-            const fee = dateFees[date] || 0;
-            return `
-              <div class="bar" style="height: ${count ? Math.max((count / Math.max(...Object.values(dateCount))) * 180, 10) : 0}px">
-                <div class="bar-value">${count}</div>
-                <div class="bar-label">${date}</div>
-              </div>
-            `;
-          })
-          .join("")}
+        ${displayDates.map((date) => {
+          const { count } = entriesByDate[date];
+          const height = Math.max((count / maxCount) * 150, 10);
+          
+          return `
+            <div class="bar" style="height: ${height}px">
+              <div class="bar-value">${count}</div>
+              <div class="bar-label">${date}</div>
+            </div>
+          `;
+        }).join("")}
       </div>
-    `;
-  } else {
-    deliveryHistoryElement.innerHTML = `
-      <p class="empty-state">Dados insuficientes para gerar o gráfico de histórico.</p>
-    `;
-  }
+    </div>
+  `;
 }
 
 // Função para renderizar tendências
 function renderTrends() {
-  const trendsElement = document.getElementById("trends");
-
-  if (deliveries.length > 1) {
-    const sortedDeliveries = [...deliveries].sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      return dateA - dateB;
-    });
-
-    const midPoint = Math.floor(sortedDeliveries.length / 2);
-    const firstHalf = sortedDeliveries.slice(0, midPoint);
-    const secondHalf = sortedDeliveries.slice(midPoint);
-
-    const firstHalfFees = firstHalf.reduce((sum, d) => sum + (Number.parseFloat(d.fee) || 0), 0);
-    const secondHalfFees = secondHalf.reduce((sum, d) => sum + (Number.parseFloat(d.fee) || 0), 0);
-
-    const feesChange = firstHalfFees > 0 
-      ? ((secondHalfFees - firstHalfFees) / firstHalfFees) * 100 
-      : secondHalfFees > 0 ? 100 : 0;
-
-    let gasChange = 0;
-    if (gasEntries.length > 1) {
-      const sortedGasData = [...gasEntries].sort((a, b) => {
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
-        return dateA - dateB;
-      });
-
-      const gasMidPoint = Math.floor(sortedGasData.length / 2);
-      const firstHalfGas = sortedGasData.slice(0, gasMidPoint);
-      const secondHalfGas = sortedGasData.slice(gasMidPoint);
-
-      const firstHalfGasAmount = firstHalfGas.reduce((sum, entry) => sum + Number.parseFloat(entry.amount), 0);
-      const secondHalfGasAmount = secondHalfGas.reduce((sum, entry) => sum + Number.parseFloat(entry.amount), 0);
-
-      gasChange = firstHalfGasAmount > 0
-        ? ((secondHalfGasAmount - firstHalfGasAmount) / firstHalfGasAmount) * 100
-        : secondHalfGasAmount > 0 ? 100 : 0;
-    }
-
-    const firstHalfGasAmount = gasEntries.length > 0
-      ? gasEntries
-          .filter((entry) => {
-            const entryDate = new Date(entry.date);
-            return firstHalf.some((d) => {
-              const deliveryDate = new Date(d.date);
-              return entryDate.getTime() <= deliveryDate.getTime();
-            });
-          })
-          .reduce((sum, entry) => sum + Number.parseFloat(entry.amount), 0)
-      : 0;
-
-    const secondHalfGasAmount = gasEntries.length > 0
-      ? gasEntries
-          .filter((entry) => {
-            const entryDate = new Date(entry.date);
-            return secondHalf.some((d) => {
-              const deliveryDate = new Date(d.date);
-              return entryDate.getTime() > deliveryDate.getTime();
-            });
-          })
-          .reduce((sum, entry) => sum + Number.parseFloat(entry.amount), 0)
-      : 0;
-
-    const firstHalfProfit = firstHalfFees - firstHalfGasAmount;
-    const secondHalfProfit = secondHalfFees - secondHalfGasAmount;
-
-    const profitChange = firstHalfProfit > 0
-      ? ((secondHalfProfit - firstHalfProfit) / firstHalfProfit) * 100
-      : secondHalfProfit > 0 ? 100 : 0;
-
-    trendsElement.innerHTML = `
-      <p>
-        <span class="trend-icon ${feesChange > 0 ? "trend-up" : feesChange < 0 ? "trend-down" : "trend-neutral"}">
-          ${feesChange > 0 ? "↑" : feesChange < 0 ? "↓" : "→"}
-        </span>
-        Receita: <span class="highlight">${feesChange.toFixed(1)}%</span> 
-        ${feesChange > 0 ? "aumento" : feesChange < 0 ? "queda" : "estável"}
-      </p>
-      <p>
-        <span class="trend-icon ${gasChange > 0 ? "trend-up" : gasChange < 0 ? "trend-down" : "trend-neutral"}">
-          ${gasChange > 0 ? "↑" : gasChange < 0 ? "↓" : "→"}
-        </span>
-        Gastos com gasolina: <span class="highlight">${gasChange.toFixed(1)}%</span> 
-        ${gasChange > 0 ? "aumento" : gasChange < 0 ? "queda" : "estável"}
-      </p>
-      <p>
-        <span class="trend-icon ${profitChange > 0 ? "trend-up" : profitChange < 0 ? "trend-down" : "trend-neutral"}">
-          ${profitChange > 0 ? "↑" : profitChange < 0 ? "↓" : "→"}
-        </span>
-        Lucro: <span class="highlight">${profitChange.toFixed(1)}%</span> 
-        ${profitChange > 0 ? "aumento" : profitChange < 0 ? "queda" : "estável"}
-      </p>
-      <p>Comparação entre primeira e segunda metade do período.</p>
-    `;
-  } else {
-    trendsElement.innerHTML = `
-      <p class="empty-state">Dados insuficientes para analisar tendências.</p>
-    `;
+  const trendsElement = document.getElementById('trends');
+  
+  if (deliveries.length < 2) {
+    trendsElement.innerHTML = '<p class="empty-state">Dados insuficientes para análise de tendências.</p>';
+    return;
   }
+  
+  // Ordenar as entregas por data
+  const sortedDeliveries = [...deliveries].sort((a, b) => new Date(a.date) - new Date(b.date));
+  
+  // Se tivermos poucos dias, não faz sentido dividir em dois períodos
+  if (new Set(sortedDeliveries.map(d => d.date)).size < 2) {
+    trendsElement.innerHTML = '<p class="empty-state">Dados insuficientes para análise de tendências. São necessários pelo menos 2 dias diferentes.</p>';
+    return;
+  }
+  
+  // Dividir em dois períodos
+  const midIndex = Math.floor(sortedDeliveries.length / 2);
+  const firstPeriod = sortedDeliveries.slice(0, midIndex);
+  const secondPeriod = sortedDeliveries.slice(midIndex);
+  
+  // Fazer o mesmo para gastos de gasolina
+  const sortedGas = [...gasEntries].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const midGasIndex = Math.floor(sortedGas.length / 2);
+  const firstGasPeriod = sortedGas.slice(0, midGasIndex);
+  const secondGasPeriod = sortedGas.slice(midGasIndex);
+  
+  // Calcular métricas para cada período
+  const period1Revenue = firstPeriod.reduce((sum, d) => sum + (parseFloat(d.fee) || 0), 0);
+  const period2Revenue = secondPeriod.reduce((sum, d) => sum + (parseFloat(d.fee) || 0), 0);
+  
+  const period1Gas = firstGasPeriod.reduce((sum, g) => sum + (parseFloat(g.amount) || 0), 0);
+  const period2Gas = secondGasPeriod.reduce((sum, g) => sum + (parseFloat(g.amount) || 0), 0);
+  
+  const period1Profit = period1Revenue - period1Gas;
+  const period2Profit = period2Revenue - period2Gas;
+  
+  // Calcular variações percentuais
+  const revenueChange = period1Revenue > 0 ? ((period2Revenue - period1Revenue) / period1Revenue) * 100 : period2Revenue > 0 ? 100 : 0;
+  const gasChange = period1Gas > 0 ? ((period2Gas - period1Gas) / period1Gas) * 100 : period2Gas > 0 ? 100 : 0;
+  const profitChange = Math.abs(period1Profit) > 0 ? ((period2Profit - period1Profit) / Math.abs(period1Profit)) * 100 : period2Profit !== 0 ? 100 : 0;
+  
+  // Determinar ícones de tendência
+  const revenueIcon = revenueChange > 0 ? '↑' : revenueChange < 0 ? '↓' : '–';
+  const gasIcon = gasChange > 0 ? '↑' : gasChange < 0 ? '↓' : '–';
+  const profitIcon = profitChange > 0 ? '↑' : profitChange < 0 ? '↓' : '–';
+  
+  // Classes para cores baseadas na tendência
+  const revenueClass = revenueChange > 0 ? 'trend-up' : revenueChange < 0 ? 'trend-down' : 'trend-neutral';
+  const gasClass = gasChange > 0 ? 'trend-up' : gasChange < 0 ? 'trend-down' : 'trend-neutral';
+  const profitClass = profitChange > 0 ? 'trend-up' : profitChange < 0 ? 'trend-down' : 'trend-neutral';
+  
+  // Construir a interface
+  trendsElement.innerHTML = `
+    <div>
+      <p>
+        <span class="trend-icon ${revenueClass}">${revenueIcon}</span>
+        Receita: <span class="highlight">${Math.abs(revenueChange).toFixed(1)}%</span> 
+        ${revenueChange > 0 ? 'aumento' : revenueChange < 0 ? 'redução' : 'sem alteração'}
+      </p>
+      
+      <p>
+        <span class="trend-icon ${gasClass}">${gasIcon}</span>
+        Gastos com gasolina: <span class="highlight">${Math.abs(gasChange).toFixed(1)}%</span>
+        ${gasChange > 0 ? 'aumento' : gasChange < 0 ? 'redução' : 'sem alteração'}
+      </p>
+      
+      <p>
+        <span class="trend-icon ${profitClass}">${profitIcon}</span>
+        Lucro: <span class="highlight">${Math.abs(profitChange).toFixed(1)}%</span>
+        ${profitChange > 0 ? 'aumento' : profitChange < 0 ? 'redução' : 'sem alteração'}
+      </p>
+      
+      <p style="font-style: italic; color: var(--text-muted); margin-top: 8px;">
+        Comparação entre primeira e segunda metade do período.
+      </p>
+    </div>
+  `;
 }
 
 // Função para renderizar evolução do lucro
 function renderProfitEvolution() {
-  const profitEvolutionChartElement = document.getElementById("profitEvolutionChart");
-
+  const profitEvolutionChart = document.getElementById("profitEvolutionChart");
+  
   if (deliveries.length === 0 && gasEntries.length === 0) {
-    profitEvolutionChartElement.innerHTML = `
-      <p class="empty-state">Nenhum dado disponível para análise.</p>
-    `;
+    profitEvolutionChart.innerHTML = '<p class="empty-state">Não há dados suficientes para análise</p>';
     return;
   }
-
+  
+  // Calcular lucro por dia
   const dailyProfits = {};
-  const dailyFees = {};
-  const dailyGasExpenses = {};
-
-  const allDates = [...deliveries.map((d) => new Date(d.date)), ...gasEntries.map((g) => new Date(g.date))];
-
-  if (allDates.length > 0) {
-    const minDate = new Date(Math.min(...allDates.map((d) => d.getTime())));
-    const maxDate = new Date(Math.max(...allDates.map((d) => d.getTime())));
-
-    const dateRange = [];
-    const currentDate = new Date(minDate);
-
-    while (currentDate <= maxDate) {
-      const formattedDate = formatDate(currentDate.toISOString().split("T")[0]);
-      dateRange.push(formattedDate);
-      dailyFees[formattedDate] = 0;
-      dailyGasExpenses[formattedDate] = 0;
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    deliveries.forEach((delivery) => {
-      if (delivery.fee) {
-        const formattedDate = formatDate(delivery.date);
-        dailyFees[formattedDate] = (dailyFees[formattedDate] || 0) + Number.parseFloat(delivery.fee);
-      }
-    });
-
-    gasEntries.forEach((entry) => {
-      const formattedDate = formatDate(entry.date);
-      dailyGasExpenses[formattedDate] = (dailyGasExpenses[formattedDate] || 0) + Number.parseFloat(entry.amount);
-    });
-
-    let cumulativeProfit = 0;
-    const cumulativeProfits = {};
-
-    const sortedDates = Object.keys(dailyFees).sort((a, b) => {
-      const dateA = new Date(a.split("/").reverse().join("-"));
-      const dateB = new Date(b.split("/").reverse().join("-"));
-      return dateA - dateB;
-    });
-
-    sortedDates.forEach((date) => {
-      const dailyFee = dailyFees[date] || 0;
-      const dailyGasExpense = dailyGasExpenses[date] || 0;
-      const dailyProfit = dailyFee - dailyGasExpense;
-      dailyProfits[date] = dailyProfit;
-
-      cumulativeProfit += dailyProfit;
-      cumulativeProfits[date] = cumulativeProfit;
-    });
-
-    if (sortedDates.length > 1) {
-      const profitValues = Object.values(cumulativeProfits);
-      const maxProfit = Math.max(...profitValues);
-      const minProfit = Math.min(...profitValues);
-      const range = Math.max(Math.abs(maxProfit), Math.abs(minProfit));
-
-      const baseHeight = 100;
-      const chartHeight = 200;
-
-      profitEvolutionChartElement.innerHTML = `
-        <div class="line-chart-container">
-          <div class="line-chart-y-axis">
-            <div class="line-chart-y-label">R$ ${formatCurrency(maxProfit)}</div>
-            <div class="line-chart-y-label">R$ 0.00</div>
-            <div class="line-chart-y-label">R$ ${minProfit < 0 ? formatCurrency(minProfit) : "0.00"}</div>
-          </div>
-          <div class="line-chart">
-            <div class="line-chart-zero-line"></div>
-            <svg class="line-chart-svg" viewBox="0 0 ${sortedDates.length * 50} 200" preserveAspectRatio="none">
-              <path class="line-chart-path" d="${generateLinePath(sortedDates, cumulativeProfits, baseHeight, chartHeight, range)}" />
-              ${generateDataPoints(sortedDates, cumulativeProfits, baseHeight, chartHeight, range)}
-            </svg>
-            <div class="line-chart-x-labels">
-              ${sortedDates
-                .map(
-                  (date, index) => `
-                <div class="line-chart-x-label" style="left: ${(index / (sortedDates.length - 1)) * 100}%">
-                  ${date}
-                </div>
-              `,
-                )
-                .join("")}
-            </div>
+  let totalProfit = 0;
+  
+  // Agrupar todas as datas únicas
+  const allDates = new Set();
+  deliveries.forEach(delivery => allDates.add(delivery.date));
+  gasEntries.forEach(entry => allDates.add(entry.date));
+  
+  // Converter para array e ordenar
+  const sortedDates = Array.from(allDates).sort();
+  
+  // Calcular lucro acumulado para cada dia
+  sortedDates.forEach(date => {
+    // Calcular receitas do dia
+    const dayFees = deliveries
+      .filter(delivery => delivery.date === date)
+      .reduce((sum, delivery) => sum + (parseFloat(delivery.fee) || 0), 0);
+    
+    // Calcular gastos do dia
+    const dayGas = gasEntries
+      .filter(entry => entry.date === date)
+      .reduce((sum, entry) => sum + (parseFloat(entry.amount) || 0), 0);
+    
+    // Lucro do dia
+    const dayProfit = dayFees - dayGas;
+    
+    // Atualizar lucro total
+    totalProfit += dayProfit;
+    
+    // Armazenar na estrutura
+    dailyProfits[date] = {
+      date,
+      dayProfit,
+      totalProfit,
+      formattedDate: formatDate(date)
+    };
+  });
+  
+  // Se tivermos apenas poucos pontos, simplificar a visualização
+  const finalDates = sortedDates.length > 15 
+    ? sortedDates.filter((_, index, arr) => {
+        // Manter o primeiro, o último e alguns pontos intermediários
+        return index === 0 || index === arr.length - 1 || index % Math.ceil(arr.length / 10) === 0;
+      })
+    : sortedDates;
+  
+  // Encontrar valores máximo e mínimo para escala
+  const profits = finalDates.map(date => dailyProfits[date].totalProfit);
+  const minProfit = Math.min(...profits);
+  const maxProfit = Math.max(...profits);
+  const range = Math.max(Math.abs(minProfit), Math.abs(maxProfit), 100);
+  
+  const bestDay = getBestProfitDay(dailyProfits);
+  const worstDay = getWorstProfitDay(dailyProfits);
+  
+  // Construir gráfico e resumo
+  profitEvolutionChart.innerHTML = `
+    <div class="chart-container">
+      <div class="line-chart-container">
+        <div class="line-chart">
+          <div class="line-chart-zero-line"></div>
+          <svg class="line-chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#3b82f6" />
+                <stop offset="100%" stop-color="#8b5cf6" />
+              </linearGradient>
+            </defs>
+            ${generateLinePath(finalDates, dailyProfits, 50, 90, range)}
+            ${generateDataPoints(finalDates, dailyProfits, 50, 90, range)}
+          </svg>
+          <div class="line-chart-x-labels">
+            ${finalDates.map((date, index) => {
+              const percentage = index / (finalDates.length - 1) * 100;
+              return `<div class="line-chart-x-label" style="left: ${percentage}%">${formatDate(date)}</div>`;
+            }).join('')}
           </div>
         </div>
-        <div class="line-chart-legend">
-          <div class="line-chart-legend-item">
-            <span class="line-chart-legend-color profit-positive"></span>
-            <span>Lucro Acumulado</span>
-          </div>
-          <div class="line-chart-info">
-            <p>Lucro total no período: <span class="highlight ${cumulativeProfit >= 0 ? "profit-positive-text" : "profit-negative-text"}">
-              R$ ${formatCurrency(cumulativeProfit)}
-            </span></p>
-            <p>Melhor dia: <span class="highlight profit-positive-text">
-              ${getBestProfitDay(dailyProfits)}
-            </span></p>
-            <p>Pior dia: <span class="highlight profit-negative-text">
-              ${getWorstProfitDay(dailyProfits)}
-            </span></p>
-          </div>
-        </div>
-      `;
-    } else {
-      profitEvolutionChartElement.innerHTML = `
-        <p class="empty-state">Dados insuficientes para gerar o gráfico de evolução do lucro.</p>
-      `;
-    }
-  } else {
-    profitEvolutionChartElement.innerHTML = `
-      <p class="empty-state">Nenhum dado disponível para análise.</p>
-    `;
-  }
+      </div>
+      <div class="line-chart-y-axis">
+        <div>R$ ${formatCurrency(range)}</div>
+        <div>R$ 0.00</div>
+        <div>R$ ${formatCurrency(-range)}</div>
+      </div>
+    </div>
+    <div class="summary-container">
+      <p>Lucro total no período: <span class="${totalProfit >= 0 ? 'profit-positive-text' : 'profit-negative-text'}">R$ ${formatCurrency(totalProfit)}</span></p>
+      <p>Melhor dia: <span class="highlight">${formatDate(bestDay.date)} (R$ ${formatCurrency(bestDay.dayProfit)})</span></p>
+      <p>Pior dia: <span class="highlight">${formatDate(worstDay.date)} (R$ ${formatCurrency(worstDay.dayProfit)})</span></p>
+    </div>
+  `;
 }
 
 // Função para mostrar estados vazios
@@ -525,61 +529,6 @@ function showEmptyStates() {
   elements.forEach(id => {
     document.getElementById(id).innerHTML = '<p class="empty-state">Nenhum dado cadastrado</p>';
   });
-}
-
-// Função para gerar o caminho SVG para o gráfico de linha
-function generateLinePath(dates, profits, baseHeight, chartHeight, range) {
-  if (dates.length === 0) return "";
-
-  let path = `M 0 ${baseHeight}`;
-
-  dates.forEach((date, index) => {
-    const profit = profits[date];
-    const yPos = baseHeight - (profit / range) * baseHeight;
-    path += ` L ${index * 50} ${yPos}`;
-  });
-
-  return path;
-}
-
-// Função para gerar os pontos de dados no gráfico
-function generateDataPoints(dates, profits, baseHeight, chartHeight, range) {
-  if (dates.length === 0) return "";
-
-  let points = "";
-
-  dates.forEach((date, index) => {
-    const profit = profits[date];
-    const yPos = baseHeight - (profit / range) * baseHeight;
-    const color = profit >= 0 ? "#16a34a" : "#dc2626";
-    points += `<circle cx="${index * 50}" cy="${yPos}" r="4" fill="${color}" class="data-point" data-value="R$ ${formatCurrency(profit)}" data-date="${date}" />`;
-  });
-
-  return points;
-}
-
-// Função para encontrar o dia com maior lucro
-function getBestProfitDay(dailyProfits) {
-  const entries = Object.entries(dailyProfits);
-  if (entries.length === 0) return "N/A";
-
-  const bestDay = entries.reduce((best, current) => {
-    return current[1] > best[1] ? current : best;
-  }, entries[0]);
-
-  return `${bestDay[0]} (R$ ${formatCurrency(bestDay[1])})`;
-}
-
-// Função para encontrar o dia com menor lucro
-function getWorstProfitDay(dailyProfits) {
-  const entries = Object.entries(dailyProfits);
-  if (entries.length === 0) return "N/A";
-
-  const worstDay = entries.reduce((worst, current) => {
-    return current[1] < worst[1] ? current : worst;
-  }, entries[0]);
-
-  return `${worstDay[0]} (R$ ${formatCurrency(worstDay[1])})`;
 }
 
 // Exportar funções auxiliares para uso em outros módulos

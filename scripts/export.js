@@ -1,6 +1,7 @@
 import { deliveries, gasEntries, loadDeliveries, loadGasEntries, updateTotals } from './data.js';
 import { formatDate, getCurrentDate, showToast } from './utils.js';
 import { generateUniqueID } from './idGenerator.js';
+import { optimizeStoredImages } from './imageUtils.js';
 
 // Função para gerar CSV com os dados
 export function generateCSV() {
@@ -40,105 +41,90 @@ export function generateCSV() {
 
 // Função para fazer backup dos dados (sem limpar)
 export function backupData() {
-  // Criar CSV com os dados
-  const csvContent = generateCSV();
+  if (!deliveries.length && !gasEntries.length) {
+    showToast('Não há dados para fazer backup', 'error');
+    return;
+  }
   
-  // Gerar ID único para o arquivo
-  const uniqueID = generateUniqueID();
+  const fileName = `backup_${formatDate(new Date().toISOString().split('T')[0]).replace(/\//g, '-')}.csv`;
+  exportToCSV(fileName);
   
-  // Criar link para download
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `backup_entregas_${getCurrentDate()}_${uniqueID}.csv`;
-  
-  // Simular clique para download
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  // Armazenar dados com imagens otimizadas
+  optimizeStoredImages();
   
   showToast('Backup realizado com sucesso!', 'success');
 }
 
 // Função para finalizar a semana e limpar os dados
 export function finishWeek() {
-  if (confirm('Tem certeza que deseja finalizar a semana? Todos os dados serão exportados e limpos.')) {
-    // Criar CSV com os dados
-    const csvContent = generateCSV();
-    
-    // Gerar ID único para o arquivo
-    const uniqueID = generateUniqueID();
-    
-    // Criar link para download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `entregas_${getCurrentDate()}_${uniqueID}.csv`;
-    
-    // Simular clique para download
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    // Limpar dados
-    localStorage.removeItem('deliveries');
-    localStorage.removeItem('gasEntries');
-    
-    // Recarregar dados
-    loadDeliveries();
-    loadGasEntries();
-    updateTotals();
-    
-    showToast('Semana finalizada com sucesso!', 'success');
+  if (!deliveries.length && !gasEntries.length) {
+    showToast('Não há dados para exportar', 'error');
+    return;
   }
+  
+  const fileName = `financeiro_${formatDate(new Date().toISOString().split('T')[0]).replace(/\//g, '-')}.csv`;
+  exportToCSV(fileName);
+  
+  // Limpar todos os dados após exportação
+  localStorage.removeItem('deliveries');
+  localStorage.removeItem('gasEntries');
+  
+  // Recarregar a página para atualizar os dados
+  window.location.reload();
 }
 
 // Função para limpar todos os dados
 export function clearAllData() {
-  // Verificar se há dados para backup
-  if (deliveries.length === 0 && gasEntries.length === 0) {
-    showToast('Não há dados para limpar.', 'info');
+  if (!confirm('Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.')) {
     return;
   }
+  
+  // Fazer backup antes de limpar
+  if (deliveries.length || gasEntries.length) {
+    const fileName = `backup_final_${formatDate(new Date().toISOString().split('T')[0]).replace(/\//g, '-')}.csv`;
+    exportToCSV(fileName);
+  }
+  
+  localStorage.removeItem('deliveries');
+  localStorage.removeItem('gasEntries');
+  
+  // Recarregar a página para atualizar os dados
+  window.location.reload();
+}
 
-  // Gerar dois números aleatórios entre 1 e 9
-  const num1 = Math.floor(Math.random() * 9) + 1;
-  const num2 = Math.floor(Math.random() * 9) + 1;
-  const resultado = num1 + num2;
+// Função para exportar para CSV
+function exportToCSV(fileName) {
+  // Cabeçalho do CSV
+  let csvContent = 'Data,Número do Pedido,Valor Pedido,Tipo\n';
   
-  // Solicitar resposta do usuário
-  const resposta = prompt(`Para confirmar a exclusão, digite o resultado de ${num1} + ${num2}:`);
+  // Adicionar entregas
+  deliveries.forEach(delivery => {
+    csvContent += `${formatDate(delivery.date)},${delivery.orderNumber},${delivery.fee},Entrega\n`;
+  });
   
-  // Verificar se a resposta está correta
-  if (resposta !== null && parseInt(resposta) === resultado) {
-    // Criar CSV com os dados antes de limpar
-    const csvContent = generateCSV();
-    
-    // Gerar ID único para o arquivo
-    const uniqueID = generateUniqueID();
-    
-    // Criar link para download do backup automático
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  // Adicionar gastos com gasolina
+  gasEntries.forEach(entry => {
+    csvContent += `${formatDate(entry.date)},,${entry.amount},Gasolina\n`;
+  });
+  
+  // Criar o arquivo
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  
+  // Verificar se o navegador suporta download via link
+  if (navigator.msSaveBlob) {
+    // Para IE e Edge
+    navigator.msSaveBlob(blob, fileName);
+  } else {
+    // Para outros navegadores
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `backup_automatico_${getCurrentDate()}_${uniqueID}.csv`;
+    const url = URL.createObjectURL(blob);
     
-    // Simular clique para download
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    // Limpar dados
-    localStorage.removeItem('deliveries');
-    localStorage.removeItem('gasEntries');
-    
-    // Recarregar dados
-    loadDeliveries();
-    loadGasEntries();
-    updateTotals();
-    
-    showToast('Backup automático criado e dados excluídos!', 'success');
-  } else if (resposta !== null) {
-    showToast('Resposta incorreta. Operação cancelada.', 'error');
   }
 } 

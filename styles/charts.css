@@ -1,6 +1,5 @@
 /* Chart Container */
 .chart-container {
-  height: 250px;
   position: relative;
   margin-top: var(--spacing-4);
   margin-bottom: 1.5rem;
@@ -9,6 +8,8 @@
   background: linear-gradient(to bottom, var(--card-background), var(--background-color));
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
+  overflow: hidden;
+  min-height: 200px;
 }
 
 /* Bar Chart */
@@ -19,6 +20,7 @@
   width: 100%;
   justify-content: space-around;
   padding-bottom: var(--spacing-4);
+  position: relative;
 }
 
 .bar {
@@ -28,6 +30,8 @@
   position: relative;
   transition: all var(--transition-normal);
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  min-width: 20px;
+  max-width: 50px;
 }
 
 .bar:hover {
@@ -44,6 +48,7 @@
   text-align: center;
   color: var(--text-muted);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .bar-value {
@@ -73,8 +78,8 @@
 }
 
 .pie-label {
-  position: absolute;
-  bottom: -40px;
+  position: relative;
+  margin-top: 20px;
   width: 100%;
   text-align: center;
   font-size: var(--font-size-sm);
@@ -99,6 +104,7 @@
   width: 12px;
   height: 12px;
   border-radius: 2px;
+  flex-shrink: 0;
 }
 
 /* Line Chart */
@@ -110,16 +116,18 @@
   background: var(--card-background);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
+  overflow: hidden;
 }
 
 .line-chart-y-axis {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  width: 80px;
+  width: 60px;
   padding-right: 10px;
   font-size: var(--font-size-xs);
   color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .line-chart {
@@ -166,6 +174,7 @@
   justify-content: space-between;
   font-size: var(--font-size-xs);
   color: var(--text-muted);
+  overflow: visible;
 }
 
 .line-chart-x-label {
@@ -213,6 +222,7 @@
   width: 12px;
   height: 12px;
   border-radius: 2px;
+  flex-shrink: 0;
 }
 
 /* Horizontal Bar Chart */
@@ -240,6 +250,7 @@
   width: 80px;
   font-size: var(--font-size-xs);
   text-align: right;
+  flex-shrink: 0;
 }
 
 .horizontal-bar-track {
@@ -248,6 +259,7 @@
   background-color: var(--border-color);
   border-radius: var(--radius-full);
   overflow: hidden;
+  min-width: 50px;
 }
 
 .horizontal-bar-fill {
@@ -258,26 +270,26 @@
 }
 
 .horizontal-bar-value {
-  width: 70px;
+  width: 80px;
   font-size: var(--font-size-xs);
-  font-weight: 600;
+  padding-left: var(--spacing-2);
+  flex-shrink: 0;
 }
 
-/* Metrics Grid */
+/* Metric grid */
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--spacing-4);
-  margin-top: var(--spacing-4);
 }
 
 .metric-card {
-  background-color: #f8fafc;
+  padding: var(--spacing-3);
+  background-color: white;
   border-radius: var(--radius-md);
-  padding: var(--spacing-4);
-  text-align: center;
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  text-align: center;
+  transition: all var(--transition-normal);
 }
 
 .metric-card:hover {
@@ -289,7 +301,7 @@
   font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--primary-color);
-  margin-bottom: var(--spacing-2);
+  margin-bottom: var(--spacing-1);
 }
 
 .metric-label {
@@ -297,51 +309,54 @@
   color: var(--text-muted);
 }
 
-/* Empty State */
 .empty-state {
-  text-align: center;
-  padding: var(--spacing-8);
-  color: var(--text-muted);
-  background: linear-gradient(var(--card-background), var(--background-color));
-  border-radius: var(--radius-lg);
-  border: 2px dashed var(--border-color);
-  margin: var(--spacing-4) 0;
-}
-
-/* Trend Indicators */
-.trend-icon {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
+  height: 150px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-4);
+}
+
+/* Trend Icons */
+.trend-icon {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
   width: 24px;
   height: 24px;
   border-radius: 50%;
   margin-right: var(--spacing-2);
   font-weight: bold;
+  flex-shrink: 0;
 }
 
 .trend-up {
-  background-color: var(--success-light);
-  color: var(--success-color);
+  background-color: rgba(22, 163, 74, 0.1);
+  color: var(--primary-color);
 }
 
 .trend-down {
-  background-color: var(--danger-light);
+  background-color: rgba(220, 38, 38, 0.1);
   color: var(--danger-color);
 }
 
 .trend-neutral {
-  background-color: var(--border-color);
+  background-color: rgba(100, 116, 139, 0.1);
   color: var(--text-muted);
 }
 
 /* Profit Colors */
 .profit-positive {
-  background-color: var(--primary-color);
+  color: var(--primary-color);
 }
 
 .profit-negative {
-  background-color: var(--danger-color);
+  color: var(--danger-color);
 }
 
 .profit-positive-text {

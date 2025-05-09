@@ -1,4 +1,4 @@
-import { getCurrentDate, showToast, showImageModal, checkDuplicateDelivery } from './utils.js';
+import { getCurrentDate, showToast, checkDuplicateDelivery } from './utils.js';
 import { 
   deliveries, 
   gasEntries, 
@@ -12,6 +12,7 @@ import {
 } from './data.js';
 import { finishWeek, backupData, clearAllData } from './export.js';
 import { importCSV } from './import.js';
+import { processImageForStorage, showImageModal } from './imageUtils.js';
 
 // Função para manipular o envio do formulário de entregas
 export function handleDeliveryFormSubmit(event) {
@@ -38,11 +39,17 @@ export function handleDeliveryFormSubmit(event) {
     return;
   }
   
+  // Obter a imagem e otimizar se necessário
+  let image = imagePreview.querySelector('img')?.src || null;
+  if (image && image.startsWith('data:image')) {
+    image = image.replace(/^data:image\/\w+;base64,/, '');
+  }
+  
   const newDelivery = {
     date,
     orderNumber,
     fee: parseFloat(fee) || 0,
-    image: imagePreview.querySelector('img')?.src || null
+    image
   };
   
   deliveries.push(newDelivery);
@@ -74,16 +81,27 @@ export function setupDeliveryForm() {
     imageInput.click();
   });
   
-  imageInput.addEventListener('change', (event) => {
+  imageInput.addEventListener('change', async (event) => {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        document.getElementById('imagePreview').innerHTML = `
-          <img src="${e.target.result}" alt="Preview" class="table-image" onclick="showImageModal(this.src)">
-        `;
-      };
-      reader.readAsDataURL(file);
+      try {
+        const imagePreview = document.getElementById('imagePreview');
+        imagePreview.innerHTML = `<div class="processing-indicator"></div> Processando imagem...`;
+        showToast('Processando imagem...', 'info');
+        
+        const compressedImage = await processImageForStorage(file);
+        
+        if (compressedImage) {
+          imagePreview.innerHTML = `
+            <img src="${compressedImage}" alt="Preview" class="table-image" onclick="showImageModal(this.src)">
+          `;
+          showToast('Imagem carregada com sucesso!', 'success');
+        }
+      } catch (error) {
+        document.getElementById('imagePreview').innerHTML = '';
+        showToast('Erro ao processar a imagem', 'error');
+        console.error(error);
+      }
     }
   });
 }
@@ -93,13 +111,36 @@ export function setupGasForm() {
   const gasForm = document.getElementById('gasForm');
   const gasDateInput = document.getElementById('gasDate');
   const gasImageInput = document.getElementById('gasImage');
+  const gasUploadButton = document.getElementById('gasUploadButton');
   
   gasDateInput.value = getCurrentDate();
   
   gasForm.addEventListener('submit', handleGasFormSubmit);
+
+  gasUploadButton.addEventListener('click', () => {
+    gasImageInput.click();
+  });
   
-  gasImageInput.addEventListener('change', (event) => {
-    handleGasImageUpload(event.target);
+  gasImageInput.addEventListener('change', async (event) => {
+    try {
+      const imagePreview = document.getElementById('gasImagePreview');
+      imagePreview.innerHTML = `<div class="processing-indicator"></div> Processando imagem...`;
+      showToast('Processando imagem...', 'info');
+      
+      const file = event.target.files[0];
+      const compressedImage = await processImageForStorage(file);
+      
+      if (compressedImage) {
+        imagePreview.innerHTML = `
+          <img src="${compressedImage}" alt="Preview" class="table-image" onclick="showImageModal(this.src)">
+        `;
+        showToast('Imagem carregada com sucesso!', 'success');
+      }
+    } catch (error) {
+      document.getElementById('gasImagePreview').innerHTML = '';
+      showToast('Erro ao processar a imagem', 'error');
+      console.error(error);
+    }
   });
 }
 
@@ -202,10 +243,16 @@ function handleGasFormSubmit(event) {
     return;
   }
   
+  // Obter a imagem e otimizar se necessário
+  let image = imagePreview.querySelector('img')?.src || null;
+  if (image && image.startsWith('data:image')) {
+    image = image.replace(/^data:image\/\w+;base64,/, '');
+  }
+  
   const newGasEntry = {
     date,
     amount: parseFloat(amount) || 0,
-    image: imagePreview.querySelector('img')?.src || null
+    image
   };
   
   gasEntries.push(newGasEntry);
@@ -216,21 +263,6 @@ function handleGasFormSubmit(event) {
   document.getElementById('gasDate').value = getCurrentDate();
   
   showToast('Abastecimento registrado com sucesso!', 'success');
-}
-
-// Função para manipular o upload de imagem de gasolina
-function handleGasImageUpload(input) {
-  const file = input.files[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const imagePreview = document.getElementById('gasImagePreview');
-      imagePreview.innerHTML = `
-        <img src="${e.target.result}" alt="Preview" class="table-image" onclick="showImageModal(this.src)">
-      `;
-    };
-    reader.readAsDataURL(file);
-  }
 }
 
 // Função para fechar o modal de imagem

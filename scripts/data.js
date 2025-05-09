@@ -1,5 +1,6 @@
 import { formatCurrency, formatDate, showToast, getCurrentDate, checkDuplicateDelivery } from './utils.js';
 import { renderAnalytics } from './analytics.js';
+import { formatImageDisplay } from './imageUtils.js';
 
 // Variáveis globais para armazenar os dados
 export let deliveries = JSON.parse(localStorage.getItem('deliveries')) || [];
@@ -72,7 +73,7 @@ export function updateDeliveriesTable() {
       <td data-label="Taxa">R$ ${formatCurrency(parseFloat(delivery.fee) || 0)}</td>
       <td data-label="Status">${delivery.fee ? '' : '<span style="text-decoration: underline;">Pendente</span>'}</td>
       <td data-label="Comprovante">
-        ${delivery.image ? `<img src="${delivery.image}" alt="Preview" class="table-image" onclick="showImageModal(this.src)">` : 'Sem comprovante'}
+        ${formatImageDisplay(delivery.image)}
       </td>
       <td data-label="Ações">
         <div class="table-actions">
@@ -96,7 +97,7 @@ export function updateGasTable() {
       <td data-label="Data">${formatDate(entry.date)}</td>
       <td data-label="Valor">R$ ${formatCurrency(parseFloat(entry.amount) || 0)}</td>
       <td data-label="Comprovante">
-        ${entry.image ? `<img src="${entry.image}" alt="Preview" class="table-image" onclick="showImageModal(this.src)">` : 'Sem comprovante'}
+        ${formatImageDisplay(entry.image)}
       </td>
       <td data-label="Ações">
         <div class="table-actions">
@@ -119,7 +120,12 @@ export function editDelivery(index) {
   
   const imagePreview = document.getElementById('imagePreview');
   if (delivery.image) {
-    imagePreview.innerHTML = `<img src="${delivery.image}" alt="Preview" class="table-image" onclick="showImageModal(this.src)">`;
+    // Formatar a imagem para exibição
+    const imageUrl = delivery.image.startsWith('data:') 
+      ? delivery.image 
+      : `data:image/jpeg;base64,${delivery.image}`;
+      
+    imagePreview.innerHTML = `<img src="${imageUrl}" alt="Preview" class="table-image" onclick="showImageModal(this.src)">`;
   } else {
     imagePreview.innerHTML = '';
   }
@@ -144,6 +150,11 @@ export function editDelivery(index) {
     delivery.fee = parseFloat(document.getElementById('fee').value) || 0;
     delivery.date = newDate;
     delivery.image = imagePreview.querySelector('img')?.src || null;
+    
+    // Se a imagem estiver no formato de exibição completo (com data:image), otimize
+    if (delivery.image && delivery.image.startsWith('data:image')) {
+      delivery.image = delivery.image.replace(/^data:image\/\w+;base64,/, '');
+    }
     
     saveDeliveries();
     
@@ -176,7 +187,12 @@ export function editGasEntry(index) {
   
   const imagePreview = document.getElementById('gasImagePreview');
   if (entry.image) {
-    imagePreview.innerHTML = `<img src="${entry.image}" alt="Preview" class="table-image" onclick="showImageModal(this.src)">`;
+    // Formatar a imagem para exibição
+    const imageUrl = entry.image.startsWith('data:') 
+      ? entry.image 
+      : `data:image/jpeg;base64,${entry.image}`;
+      
+    imagePreview.innerHTML = `<img src="${imageUrl}" alt="Preview" class="table-image" onclick="showImageModal(this.src)">`;
   } else {
     imagePreview.innerHTML = '';
   }
@@ -191,6 +207,11 @@ export function editGasEntry(index) {
     entry.date = document.getElementById('gasDate').value;
     entry.amount = parseFloat(document.getElementById('gasAmount').value) || 0;
     entry.image = imagePreview.querySelector('img')?.src || null;
+    
+    // Se a imagem estiver no formato de exibição completo (com data:image), otimize
+    if (entry.image && entry.image.startsWith('data:image')) {
+      entry.image = entry.image.replace(/^data:image\/\w+;base64,/, '');
+    }
     
     saveGasEntries();
     

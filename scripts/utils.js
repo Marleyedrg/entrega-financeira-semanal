@@ -65,24 +65,24 @@ export function showToast(message, type = 'info') {
   }, 3000);
 }
 
-// Função para mostrar o modal de imagem
-export function showImageModal(src) {
-  const modal = document.getElementById('imageModal');
-  const modalImg = document.getElementById('modalImage');
-  
-  modal.style.display = 'block';
-  modalImg.src = src;
-  
-  setTimeout(() => {
-    modal.classList.add('show');
-  }, 100);
-}
+// Export image handling functions from imageUtils.js
+export { 
+  compressImage, 
+  checkStorageSpace, 
+  processImageForStorage, 
+  showImageModal,
+  formatImageDisplay,
+  optimizeStoredImages
+} from './imageUtils.js';
 
-// Função para verificar se existe uma entrega duplicada
+// Export mobile detection from mobile.js
+export { isMobileDevice } from './mobile.js';
+
+// Função para verificar se há entregas duplicadas
 export function checkDuplicateDelivery(orderNumber, date, deliveries, excludeIndex = -1) {
-  return deliveries.some((delivery, index) => 
-    index !== excludeIndex && 
-    delivery.orderNumber === orderNumber && 
-    delivery.date === date
-  );
+  return deliveries.findIndex((delivery, index) => {
+    return index !== excludeIndex && 
+           delivery.orderNumber === orderNumber && 
+           delivery.date === date;
+  }) !== -1;
 } 
