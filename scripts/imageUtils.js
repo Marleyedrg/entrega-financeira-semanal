@@ -90,55 +90,55 @@ export async function processImageForStorage(file) {
   if (!file) return null;
   
   try {
-    // Check available storage space
-    if (!checkStorageSpace()) {
-      throw new Error('Espaço de armazenamento insuficiente');
+    // Validar tipo de arquivo
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      throw new Error('Tipo de arquivo não suportado. Use JPG, PNG ou WebP.');
     }
     
     // Check max file size (5MB)
     const MAX_FILE_SIZE = 5 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
-      showToast('Imagem muito grande! Reduzindo qualidade...', 'info');
+      showToast('Comprimindo imagem...', 'info');
     }
     
     // Determine quality based on device and file size
     const mobile = isMobileDevice();
     
-    // Dynamically adjust quality based on file size
-    let quality = mobile ? 0.5 : 0.7;
-    let maxWidth = mobile ? 600 : 800;
+    // Ajustar configurações para melhor performance em dispositivos móveis
+    let quality = mobile ? 0.6 : 0.8;
+    let maxWidth = mobile ? 800 : 1200;
     
-    // Further reduce for large files on mobile devices
-    if (mobile && file.size > 2 * 1024 * 1024) { // More than 2MB
-      quality = 0.4;
-      maxWidth = 500;
+    // Reduzir ainda mais para arquivos muito grandes
+    if (file.size > 3 * 1024 * 1024) { // Mais que 3MB
+      quality = mobile ? 0.4 : 0.6;
+      maxWidth = mobile ? 600 : 800;
     }
     
     // Compress the image
     const compressedImage = await compressImage(file, maxWidth, quality);
     
-    // Remove metadata prefix from base64 to save storage space
-    if (compressedImage && compressedImage.startsWith('data:image')) {
-      return compressedImage;
+    if (!compressedImage) {
+      throw new Error('Falha ao processar a imagem. Tente novamente.');
     }
     
     return compressedImage;
+    
   } catch (error) {
     console.error('Erro ao processar imagem:', error);
     
-    // More descriptive error messages for mobile devices
-    if (isMobileDevice()) {
-      if (error.name === 'QuotaExceededError' || error.message.includes('storage')) {
-        showToast('Armazenamento do dispositivo está cheio. Faça backup e limpe seus dados.', 'error');
-      } else if (error.name === 'NotReadableError') {
-        showToast('Não foi possível ler a imagem. Tente outra foto.', 'error');
-      } else {
-        showToast('Erro ao processar a imagem em dispositivo móvel. Tente uma imagem menor.', 'error');
-      }
+    // Mensagens de erro mais específicas
+    if (error.name === 'QuotaExceededError') {
+      throw new Error('Armazenamento do dispositivo está cheio. Faça backup e limpe seus dados.');
+    } else if (error.name === 'NotReadableError') {
+      throw new Error('Não foi possível ler a imagem. Tente outra foto.');
+    } else if (error.message.includes('tipo de arquivo')) {
+      throw new Error(error.message);
+    } else if (mobile) {
+      throw new Error('Erro ao processar a imagem. Tente uma foto menor ou use outro app de câmera.');
     } else {
-      showToast('Não foi possível processar a imagem. ' + error.message, 'error');
+      throw new Error('Erro ao processar a imagem. ' + error.message);
     }
-    return null;
   }
 }
 

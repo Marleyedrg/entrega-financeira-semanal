@@ -1,21 +1,34 @@
-// Função para obter a data atual formatada
+// Função para obter a data atual no formato YYYY-MM-DD
 export function getCurrentDate() {
   const now = new Date();
-  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-  return localDate.toISOString().split('T')[0];
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
-// Função para formatar datas
+// Função para formatar uma data para exibição
 export function formatDate(dateString) {
-  if (!dateString) return '-';
-  
-  const date = new Date(dateString + 'T00:00:00');
-  if (isNaN(date.getTime())) return '-';
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
   
   const day = String(date.getDate()).padStart(2, '0');
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
+}
+
+// Função para normalizar uma data para o formato YYYY-MM-DD
+export function normalizeDate(dateString) {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
+  
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 // Função para formatar valores monetários
@@ -79,10 +92,11 @@ export {
 export { isMobileDevice } from './mobile.js';
 
 // Função para verificar se há entregas duplicadas
-export function checkDuplicateDelivery(orderNumber, date, deliveries, excludeIndex = -1) {
-  return deliveries.findIndex((delivery, index) => {
-    return index !== excludeIndex && 
-           delivery.orderNumber === orderNumber && 
-           delivery.date === date;
-  }) !== -1;
+export function checkDuplicateDelivery(orderNumber, date, deliveries, excludeId = null) {
+  const normalizedDate = normalizeDate(date);
+  return deliveries.some(delivery => 
+    delivery.orderNumber === orderNumber && 
+    delivery.date === normalizedDate &&
+    (!excludeId || delivery.id !== excludeId)
+  );
 } 

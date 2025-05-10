@@ -469,46 +469,91 @@ input:focus {
   transform: scale(1.05);
 }
 
+/* Processing indicator styles */
 .processing-indicator {
-  display: inline-block;
-  width: 24px;
-  height: 24px;
-  border: 3px solid rgba(37, 99, 235, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #f0fdf4;
+  border-radius: 6px;
+  color: #16a34a;
+  font-size: 0.875rem;
+}
+
+.processing-indicator::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(22, 163, 74, 0.2);
+  border-top-color: #16a34a;
   border-radius: 50%;
-  border-top-color: var(--primary-color);
-  animation: spin 1s ease-in-out infinite;
-  margin-right: var(--spacing-2);
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-.image-upload-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
+/* Image preview improvements */
+.image-preview-container {
+  position: relative;
+  min-height: 100px;
 }
 
-.image-upload-preview {
+.image-preview-item {
   position: relative;
   display: inline-block;
+  margin: 0.5rem;
 }
 
-.image-upload-preview .remove-image {
+.preview-image {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.delete-image {
   position: absolute;
   top: -8px;
   right: -8px;
-  background: #fee2e2;
-  color: #b91c1c;
-  border-radius: 50%;
   width: 24px;
   height: 24px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-weight: bold;
-  border: 1px solid #fecaca;
-  font-size: 14px;
+  font-size: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.delete-image:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  .preview-image {
+    max-width: 150px;
+    max-height: 150px;
+  }
+  
+  .delete-image {
+    width: 28px;
+    height: 28px;
+    font-size: 18px;
+  }
+  
+  .processing-indicator {
+    font-size: 0.75rem;
+    padding: 0.75rem;
+  }
 } 

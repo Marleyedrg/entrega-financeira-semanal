@@ -10,6 +10,13 @@
   border: 1px solid var(--border-color);
   overflow: hidden;
   min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  background: #f8fafc;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
 }
 
 /* Bar Chart */
@@ -63,14 +70,12 @@
 
 /* Pie Chart */
 .pie-chart {
-  position: relative;
   width: 200px;
   height: 200px;
   border-radius: 50%;
-  margin: 0 auto;
-  box-shadow: var(--shadow-md);
-  border: 4px solid white;
-  transition: transform var(--transition-normal);
+  margin: 1rem auto;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .pie-chart:hover {
@@ -78,33 +83,42 @@
 }
 
 .pie-label {
-  position: relative;
-  margin-top: 20px;
-  width: 100%;
-  text-align: center;
-  font-size: var(--font-size-sm);
+  margin-top: 1.5rem;
   display: flex;
-  justify-content: center;
-  gap: var(--spacing-4);
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0 1rem;
 }
 
 .pie-label-item {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-2) var(--spacing-3);
-  background: var(--card-background);
-  border-radius: var(--radius-full);
-  box-shadow: var(--shadow-sm);
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #1e293b;
 }
 
 .pie-color {
-  display: inline-block;
   width: 12px;
   height: 12px;
   border-radius: 2px;
-  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* Mobile optimizations for pie chart */
+@media (max-width: 768px) {
+  .pie-chart {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .pie-label {
+    margin-top: 1rem;
+  }
+  
+  .pie-label-item {
+    font-size: 0.75rem;
+  }
 }
 
 /* Line Chart */

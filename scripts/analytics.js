@@ -12,129 +12,93 @@ import {
 
 // Função principal de renderização de análises
 export function renderAnalytics() {
-  if ((!deliveries || deliveries.length === 0) && (!gasEntries || gasEntries.length === 0)) {
-    showEmptyStates();
+  if (deliveries.length === 0) {
+    showEmptyState();
     return;
   }
 
-  renderWeekdayAnalysis();
   renderFinancialSummary();
   renderRevenueExpenseChart();
-  renderGasExpenseChart();
+  renderExpenseDeliveryRatio();
+  renderExpenseIncomeRatio();
   renderPerformanceMetrics();
-  renderDeliveryHistory();
-  renderTrends();
-  renderProfitEvolution();
-  
-  // Apply optimizations to all chart containers after rendering
-  const chartContainers = document.querySelectorAll('.chart-container');
-  chartContainers.forEach(container => {
-    optimizeChartRendering(container);
-    makeChartResponsive(container);
-  });
-  
-  // Add specific optimizations for chart types
-  adjustChartSize("revenueExpenseChart", { mobileWidth: 150, mobileHeight: 150 });
-  adjustChartSize("profitEvolutionChart", { mobileWidth: 180, mobileHeight: 180 });
+  renderBestDay();
+  renderWorstDay();
 }
 
-// Função para renderizar análise por dia da semana
-function renderWeekdayAnalysis() {
-  const weekdayCounts = {
-    Domingo: 0, Segunda: 0, Terça: 0,
-    Quarta: 0, Quinta: 0, Sexta: 0, Sábado: 0
-  };
+// Função para mostrar estado vazio
+function showEmptyState() {
+  const containers = [
+    'financialSummary',
+    'expenseDeliveryRatio',
+    'expenseIncomeRatio',
+    'performanceMetrics',
+    'bestDay',
+    'worstDay'
+  ];
 
-  const weekdayFees = {
-    Domingo: 0, Segunda: 0, Terça: 0,
-    Quarta: 0, Quinta: 0, Sexta: 0, Sábado: 0
-  };
-
-  deliveries.forEach((delivery) => {
-    const day = getWeekdayName(delivery.date);
-    weekdayCounts[day] = (weekdayCounts[day] || 0) + 1;
-    if (delivery.fee) {
-      weekdayFees[day] = (weekdayFees[day] || 0) + Number.parseFloat(delivery.fee);
+  containers.forEach(id => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.innerHTML = '<p class="empty-state">Nenhum dado cadastrado</p>';
     }
   });
+}
 
-  // Renderizar gráfico de barras para entregas por dia da semana
-  const weekdayChartElement = document.getElementById("weekdayChart");
-  const maxCount = Math.max(...Object.values(weekdayCounts), 1); // Evitar divisão por zero
-  
-  weekdayChartElement.innerHTML = `
-    <div class="chart-container">
-      <div class="bar-chart">
-        ${Object.entries(weekdayCounts)
-          .map(([day, count]) => `
-            <div class="bar" style="height: ${count ? Math.max((count / maxCount) * 150, 10) : 0}px">
-              <div class="bar-value">${count}</div>
-              <div class="bar-label">${day.substring(0, 3)}</div>
-            </div>
-          `)
-          .join("")}
-      </div>
-    </div>
-  `;
+// Função para agrupar dados por dia
+function groupDataByDay() {
+  const dailyData = {};
 
-  // Análise de dias de pico
-  const sortedDays = Object.entries(weekdayCounts).sort((a, b) => b[1] - a[1]);
-  const peakDay = sortedDays[0];
-  
-  // Encontrar o pior dia que tenha pelo menos uma entrega
-  const activeDays = sortedDays.filter(day => day[1] > 0);
-  const worstDay = activeDays.length > 0 ? activeDays[activeDays.length - 1] : sortedDays[sortedDays.length - 1];
-  
-  const peakDayElement = document.getElementById("peakDay");
-  const totalDeliveries = deliveries.length || 1; // Evitar divisão por zero
+  // Agrupa entregas por dia
+  deliveries.forEach(delivery => {
+    const date = delivery.date;
+    if (!dailyData[date]) {
+      dailyData[date] = {
+        deliveries: [],
+        totalFees: 0,
+        gasExpenses: 0,
+        deliveryCount: 0
+      };
+    }
+    dailyData[date].deliveries.push(delivery);
+    dailyData[date].totalFees += parseFloat(delivery.fee) || 0;
+    dailyData[date].deliveryCount += 1;
+  });
 
-  if (peakDay && peakDay[1] > 0) {
-    peakDayElement.innerHTML = `
-      <div class="peak-days-grid">
-        <div class="peak-day-card">
-          <h4>Melhor Dia</h4>
-          <p>O dia com maior número de entregas foi <span class="highlight">${peakDay[0]}</span> com <span class="highlight">${peakDay[1]} ${peakDay[1] === 1 ? 'entrega' : 'entregas'}</span>.</p>
-          <p>Isso representa <span class="highlight">${Math.round((peakDay[1] / totalDeliveries) * 100)}%</span> do total de entregas.</p>
-          <p>Valor arrecadado neste dia: <span class="highlight">R$ ${formatCurrency(weekdayFees[peakDay[0]])}</span></p>
-        </div>
-        <div class="peak-day-card">
-          <h4>Dia Mais Fraco</h4>
-          <p>O dia com menor número de entregas foi <span class="highlight">${worstDay[0]}</span> com <span class="highlight">${worstDay[1]} ${worstDay[1] === 1 ? 'entrega' : 'entregas'}</span>.</p>
-          <p>Isso representa <span class="highlight">${Math.round((worstDay[1] / totalDeliveries) * 100)}%</span> do total de entregas.</p>
-          <p>Valor arrecadado neste dia: <span class="highlight">R$ ${formatCurrency(weekdayFees[worstDay[0]])}</span></p>
-        </div>
-      </div>
-    `;
-  } else {
-    peakDayElement.innerHTML = `<p class="empty-state">Nenhum dado suficiente para análise dos dias.</p>`;
-  }
+  // Adiciona gastos com gasolina por dia
+  gasEntries.forEach(entry => {
+    const date = entry.date;
+    if (!dailyData[date]) {
+      dailyData[date] = {
+        deliveries: [],
+        totalFees: 0,
+        gasExpenses: 0,
+        deliveryCount: 0
+      };
+    }
+    dailyData[date].gasExpenses += parseFloat(entry.amount) || 0;
+  });
+
+  return dailyData;
 }
 
 // Função para renderizar resumo financeiro
 function renderFinancialSummary() {
-  const totalFees = deliveries.reduce((sum, delivery) => {
-    return sum + (parseFloat(delivery.fee) || 0);
-  }, 0);
-  
-  const totalGas = gasEntries.reduce((sum, entry) => {
-    return sum + (parseFloat(entry.amount) || 0);
-  }, 0);
-  
-  const completedDeliveries = deliveries.filter((d) => d.fee).length;
-  const pendingDeliveries = deliveries.filter((d) => !d.fee).length;
+  const totalFees = deliveries.reduce((sum, d) => sum + (parseFloat(d.fee) || 0), 0);
+  const totalGas = gasEntries.reduce((sum, g) => sum + (parseFloat(g.amount) || 0), 0);
   const netProfit = totalFees - totalGas;
   const profitMargin = totalFees > 0 ? (netProfit / totalFees) * 100 : 0;
 
-  const financialSummaryElement = document.getElementById("financialSummary");
-  financialSummaryElement.innerHTML = `
+  const element = document.getElementById('financialSummary');
+  element.innerHTML = `
     <div class="metric-grid">
       <div class="metric-card">
         <div class="metric-value">R$ ${formatCurrency(totalFees)}</div>
-        <div class="metric-label">Total Taxas</div>
+        <div class="metric-label">Total em Taxas</div>
       </div>
       <div class="metric-card">
         <div class="metric-value">R$ ${formatCurrency(totalGas)}</div>
-        <div class="metric-label">Total Gasolina</div>
+        <div class="metric-label">Total em Gasolina</div>
       </div>
       <div class="metric-card">
         <div class="metric-value">R$ ${formatCurrency(netProfit)}</div>
@@ -144,13 +108,193 @@ function renderFinancialSummary() {
         <div class="metric-value">${profitMargin.toFixed(1)}%</div>
         <div class="metric-label">Margem de Lucro</div>
       </div>
+    </div>
+  `;
+}
+
+// Função para renderizar relação gastos/pedidos por dia
+function renderExpenseDeliveryRatio() {
+  const dailyData = groupDataByDay();
+  const ratios = Object.entries(dailyData)
+    .map(([date, data]) => ({
+      date,
+      ratio: data.deliveryCount > 0 ? data.gasExpenses / data.deliveryCount : 0,
+      deliveryCount: data.deliveryCount,
+      gasExpenses: data.gasExpenses
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 5); // Últimos 5 dias
+
+  const element = document.getElementById('expenseDeliveryRatio');
+  element.innerHTML = `
+    <div class="metric-list">
+      ${ratios.map(({ date, ratio, deliveryCount, gasExpenses }) => `
+        <div class="metric-item">
+          <div class="metric-date">${formatDate(date)}</div>
+          <div class="metric-details">
+            <div>Gasto por entrega: R$ ${formatCurrency(ratio)}</div>
+            <div>Entregas: ${deliveryCount}</div>
+            <div>Gasto total: R$ ${formatCurrency(gasExpenses)}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// Função para renderizar relação gastos/ganhos por dia
+function renderExpenseIncomeRatio() {
+  const dailyData = groupDataByDay();
+  const ratios = Object.entries(dailyData)
+    .map(([date, data]) => ({
+      date,
+      ratio: data.totalFees > 0 ? (data.gasExpenses / data.totalFees) * 100 : 0,
+      income: data.totalFees,
+      expenses: data.gasExpenses
+    }))
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 5); // Últimos 5 dias
+
+  const element = document.getElementById('expenseIncomeRatio');
+  element.innerHTML = `
+    <div class="metric-list">
+      ${ratios.map(({ date, ratio, income, expenses }) => `
+        <div class="metric-item">
+          <div class="metric-date">${formatDate(date)}</div>
+          <div class="metric-details">
+            <div>Gastos/Ganhos: ${ratio.toFixed(1)}%</div>
+            <div>Ganhos: R$ ${formatCurrency(income)}</div>
+            <div>Gastos: R$ ${formatCurrency(expenses)}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// Função para renderizar métricas de desempenho
+function renderPerformanceMetrics() {
+  const dailyData = groupDataByDay();
+  const metrics = Object.values(dailyData);
+
+  const avgDeliveriesPerDay = metrics.reduce((sum, data) => sum + data.deliveryCount, 0) / metrics.length;
+  const avgFeePerDelivery = deliveries.length > 0 
+    ? deliveries.reduce((sum, d) => sum + (parseFloat(d.fee) || 0), 0) / deliveries.length 
+    : 0;
+  const avgGasPerDay = metrics.reduce((sum, data) => sum + data.gasExpenses, 0) / metrics.length;
+
+  const element = document.getElementById('performanceMetrics');
+  element.innerHTML = `
+    <div class="metric-grid">
       <div class="metric-card">
-        <div class="metric-value">${completedDeliveries}</div>
-        <div class="metric-label">Entregas Pagas</div>
+        <div class="metric-value">${avgDeliveriesPerDay.toFixed(1)}</div>
+        <div class="metric-label">Média de Entregas/Dia</div>
       </div>
       <div class="metric-card">
-        <div class="metric-value">${pendingDeliveries}</div>
-        <div class="metric-label">Entregas Pendentes</div>
+        <div class="metric-value">R$ ${formatCurrency(avgFeePerDelivery)}</div>
+        <div class="metric-label">Média por Entrega</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">R$ ${formatCurrency(avgGasPerDay)}</div>
+        <div class="metric-label">Média Gasto/Dia</div>
+      </div>
+    </div>
+  `;
+}
+
+// Função para renderizar melhor dia
+function renderBestDay() {
+  const dailyData = groupDataByDay();
+  const bestDay = Object.entries(dailyData)
+    .map(([date, data]) => ({
+      date,
+      profit: data.totalFees - data.gasExpenses,
+      deliveryCount: data.deliveryCount,
+      totalFees: data.totalFees,
+      gasExpenses: data.gasExpenses
+    }))
+    .sort((a, b) => {
+      // Primeiro critério: lucro
+      const profitDiff = b.profit - a.profit;
+      if (profitDiff !== 0) return profitDiff;
+      // Segundo critério: número de entregas
+      return b.deliveryCount - a.deliveryCount;
+    })[0];
+
+  if (!bestDay) return;
+
+  const element = document.getElementById('bestDay');
+  element.innerHTML = `
+    <div class="best-day-container">
+      <div class="day-header">${formatDate(bestDay.date)}</div>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-value">R$ ${formatCurrency(bestDay.profit)}</div>
+          <div class="metric-label">Lucro</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">${bestDay.deliveryCount}</div>
+          <div class="metric-label">Entregas</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">R$ ${formatCurrency(bestDay.totalFees)}</div>
+          <div class="metric-label">Ganhos</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">R$ ${formatCurrency(bestDay.gasExpenses)}</div>
+          <div class="metric-label">Gastos</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Função para renderizar pior dia
+function renderWorstDay() {
+  const dailyData = groupDataByDay();
+  const worstDay = Object.entries(dailyData)
+    .map(([date, data]) => ({
+      date,
+      profit: data.totalFees - data.gasExpenses,
+      deliveryCount: data.deliveryCount,
+      totalFees: data.totalFees,
+      gasExpenses: data.gasExpenses,
+      avgPerDelivery: data.deliveryCount > 0 ? data.totalFees / data.deliveryCount : 0
+    }))
+    .sort((a, b) => {
+      // Primeiro critério: lucro
+      const profitDiff = a.profit - b.profit;
+      if (profitDiff !== 0) return profitDiff;
+      // Segundo critério: média por entrega
+      return a.avgPerDelivery - b.avgPerDelivery;
+    })[0];
+
+  if (!worstDay) return;
+
+  const element = document.getElementById('worstDay');
+  element.innerHTML = `
+    <div class="worst-day-container">
+      <div class="day-header">${formatDate(worstDay.date)}</div>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-value">R$ ${formatCurrency(worstDay.profit)}</div>
+          <div class="metric-label">Lucro</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">${worstDay.deliveryCount}</div>
+          <div class="metric-label">Entregas</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">R$ ${formatCurrency(worstDay.totalFees)}</div>
+          <div class="metric-label">Ganhos</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value">R$ ${formatCurrency(worstDay.gasExpenses)}</div>
+          <div class="metric-label">Gastos</div>
+        </div>
+      </div>
+      <div class="metric-details">
+        <div>Média por entrega: R$ ${formatCurrency(worstDay.avgPerDelivery)}</div>
       </div>
     </div>
   `;
@@ -181,11 +325,11 @@ function renderRevenueExpenseChart() {
       <div class="pie-label">
         <div class="pie-label-item">
           <span class="pie-color" style="background-color: #16a34a;"></span>
-          <span>Taxas: ${feesPercentage.toFixed(1)}%</span>
+          <span>Taxas: ${feesPercentage.toFixed(1)}% (R$ ${formatCurrency(totalFees)})</span>
         </div>
         <div class="pie-label-item">
           <span class="pie-color" style="background-color: #dc2626;"></span>
-          <span>Gasolina: ${gasPercentage.toFixed(1)}%</span>
+          <span>Gasolina: ${gasPercentage.toFixed(1)}% (R$ ${formatCurrency(totalGas)})</span>
         </div>
       </div>
     </div>
@@ -231,49 +375,6 @@ function renderGasExpenseChart() {
             `;
           })
           .join("")}
-      </div>
-    </div>
-  `;
-}
-
-// Função para renderizar métricas de desempenho
-function renderPerformanceMetrics() {
-  const totalFees = deliveries.reduce((sum, d) => sum + (parseFloat(d.fee) || 0), 0);
-  const totalGas = gasEntries.reduce((sum, g) => sum + (parseFloat(g.amount) || 0), 0);
-  const completedDeliveries = deliveries.filter((d) => d.fee).length;
-  
-  const avgFeePerDelivery = completedDeliveries > 0 ? totalFees / completedDeliveries : 0;
-  const avgGasPerDelivery = completedDeliveries > 0 ? totalGas / completedDeliveries : 0;
-  const avgProfitPerDelivery = completedDeliveries > 0 ? (totalFees - totalGas) / completedDeliveries : 0;
-
-  const deliveriesPerDay = {};
-  deliveries.forEach((delivery) => {
-    const formattedDate = formatDate(delivery.date);
-    deliveriesPerDay[formattedDate] = (deliveriesPerDay[formattedDate] || 0) + 1;
-  });
-
-  const avgDeliveriesPerDay = Object.values(deliveriesPerDay).length > 0
-    ? Object.values(deliveriesPerDay).reduce((sum, count) => sum + count, 0) / Object.values(deliveriesPerDay).length
-    : 0;
-
-  const performanceMetricsElement = document.getElementById("performanceMetrics");
-  performanceMetricsElement.innerHTML = `
-    <div class="metric-grid">
-      <div class="metric-card">
-        <div class="metric-value">R$ ${formatCurrency(avgFeePerDelivery)}</div>
-        <div class="metric-label">Média por Entrega</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value">R$ ${formatCurrency(avgGasPerDelivery)}</div>
-        <div class="metric-label">Gasto Médio</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value">R$ ${formatCurrency(avgProfitPerDelivery)}</div>
-        <div class="metric-label">Lucro por Entrega</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-value">${avgDeliveriesPerDay.toFixed(1)}</div>
-        <div class="metric-label">Entregas/Dia</div>
       </div>
     </div>
   `;
@@ -516,19 +617,6 @@ function renderProfitEvolution() {
       <p>Pior dia: <span class="highlight">${formatDate(worstDay.date)} (R$ ${formatCurrency(worstDay.dayProfit)})</span></p>
     </div>
   `;
-}
-
-// Função para mostrar estados vazios
-function showEmptyStates() {
-  const elements = [
-    "weekdayChart", "peakDay", "financialSummary", "deliveryHistory",
-    "gasExpenseChart", "revenueExpenseChart", "performanceMetrics",
-    "trends", "profitEvolutionChart"
-  ];
-  
-  elements.forEach(id => {
-    document.getElementById(id).innerHTML = '<p class="empty-state">Nenhum dado cadastrado</p>';
-  });
 }
 
 // Exportar funções auxiliares para uso em outros módulos

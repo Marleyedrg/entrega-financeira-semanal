@@ -5,13 +5,56 @@ import { formatImageDisplay } from './imageUtils.js';
 // Variáveis globais para armazenar os dados
 export let deliveries = JSON.parse(localStorage.getItem('deliveries')) || [];
 export let gasEntries = JSON.parse(localStorage.getItem('gasEntries')) || [];
-export let isEditing = false; // Flag para controlar quando estamos em modo de edição
 
 // Função para salvar entregas no localStorage
 export function saveDeliveries() {
   localStorage.setItem('deliveries', JSON.stringify(deliveries));
   updateDeliveriesTable();
   updateTotals();
+}
+
+// Função para obter uma entrega por ID
+export function getDeliveryById(id) {
+  return deliveries.find(delivery => delivery.id === id) || null;
+}
+
+// Função para atualizar uma entrega existente
+export function updateDelivery(id, updatedDelivery) {
+  const index = deliveries.findIndex(delivery => delivery.id === id);
+  if (index === -1) {
+    throw new Error('Pedido não encontrado');
+  }
+
+  // Garante que a data seja uma string no formato YYYY-MM-DD
+  const date = new Date(updatedDelivery.date);
+  const formattedDate = date.toISOString().split('T')[0];
+
+  deliveries[index] = {
+    ...deliveries[index],
+    ...updatedDelivery,
+    date: formattedDate,
+    id: id // Mantém o ID original
+  };
+
+  saveDeliveries();
+  return deliveries[index];
+}
+
+// Função para adicionar uma nova entrega
+export function addDelivery(delivery) {
+  const date = new Date(delivery.date);
+  const formattedDate = date.toISOString().split('T')[0];
+
+  const newDelivery = {
+    ...delivery,
+    id: String(Date.now()),
+    date: formattedDate,
+    fee: parseFloat(delivery.fee) || 0
+  };
+
+  deliveries.push(newDelivery);
+  saveDeliveries();
+  return newDelivery;
 }
 
 // Função para salvar registros de gasolina no localStorage
@@ -23,18 +66,47 @@ export function saveGasEntries() {
 
 // Função para carregar entregas do localStorage
 export function loadDeliveries() {
-  const savedDeliveries = localStorage.getItem('deliveries');
-  if (savedDeliveries) {
-    deliveries = JSON.parse(savedDeliveries);
+  try {
+    const savedDeliveries = localStorage.getItem('deliveries');
+    if (savedDeliveries) {
+      deliveries = JSON.parse(savedDeliveries).map(delivery => ({
+        ...delivery,
+        fee: parseFloat(delivery.fee) || 0,
+        id: delivery.id || String(Date.now()),
+        date: new Date(delivery.date).toISOString().split('T')[0] // Normaliza a data
+      }));
+    } else {
+      deliveries = [];
+    }
+    // Ordena as entregas por data (mais recentes primeiro)
+    deliveries.sort((a, b) => new Date(b.date) - new Date(a.date));
+    updateDeliveriesTable();
+  } catch (error) {
+    console.error('Erro ao carregar entregas:', error);
+    showToast('Erro ao carregar entregas', 'error');
+    deliveries = [];
     updateDeliveriesTable();
   }
 }
 
-// Função para carregar entradas de gasolina do localStorage
+// Função para carregar registros de gasolina do localStorage
 export function loadGasEntries() {
-  const savedGasEntries = localStorage.getItem('gasEntries');
-  if (savedGasEntries) {
-    gasEntries = JSON.parse(savedGasEntries);
+  try {
+    const savedGasEntries = localStorage.getItem('gasEntries');
+    if (savedGasEntries) {
+      gasEntries = JSON.parse(savedGasEntries).map(entry => ({
+        ...entry,
+        amount: parseFloat(entry.amount) || 0,
+        id: entry.id || String(Date.now())
+      }));
+    } else {
+      gasEntries = [];
+    }
+    updateGasTable();
+  } catch (error) {
+    console.error('Erro ao carregar registros de gasolina:', error);
+    showToast('Erro ao carregar registros de gasolina', 'error');
+    gasEntries = [];
     updateGasTable();
   }
 }
@@ -66,22 +138,8 @@ export function updateDeliveriesTable() {
   table.innerHTML = '';
   
   deliveries.forEach((delivery, index) => {
-    const row = table.insertRow();
-    row.innerHTML = `
-      <td data-label="Data">${formatDate(delivery.date)}</td>
-      <td data-label="Pedido">${delivery.orderNumber}</td>
-      <td data-label="Taxa">R$ ${formatCurrency(parseFloat(delivery.fee) || 0)}</td>
-      <td data-label="Status">${delivery.fee ? '' : '<span style="text-decoration: underline;">Pendente</span>'}</td>
-      <td data-label="Comprovante">
-        ${formatImageDisplay(delivery.image)}
-      </td>
-      <td data-label="Ações">
-        <div class="table-actions">
-          <button class="button outline edit-button" onclick="editDelivery(${index})">Editar</button>
-          <button class="button outline delete-button" onclick="deleteDelivery(${index})">Excluir</button>
-        </div>
-      </td>
-    `;
+    const row = createTableRow(delivery);
+    table.appendChild(row);
   });
   renderAnalytics();
 }
@@ -92,141 +150,123 @@ export function updateGasTable() {
   table.innerHTML = '';
   
   gasEntries.forEach((entry, index) => {
-    const row = table.insertRow();
-    row.innerHTML = `
-      <td data-label="Data">${formatDate(entry.date)}</td>
-      <td data-label="Valor">R$ ${formatCurrency(parseFloat(entry.amount) || 0)}</td>
-      <td data-label="Comprovante">
-        ${formatImageDisplay(entry.image)}
-      </td>
-      <td data-label="Ações">
-        <div class="table-actions">
-          <button class="button outline edit-button" onclick="editGasEntry(${index})">Editar</button>
-          <button class="button outline delete-button" onclick="deleteGasEntry(${index})">Excluir</button>
-        </div>
-      </td>
-    `;
+    const row = createGasTableRow(entry);
+    table.appendChild(row);
   });
   renderAnalytics();
 }
 
-// Funções de edição e exclusão
-export function editDelivery(index) {
-  const delivery = deliveries[index];
-  
-  document.getElementById('orderNumber').value = delivery.orderNumber;
-  document.getElementById('fee').value = delivery.fee;
-  document.getElementById('date').value = delivery.date;
-  
-  const imagePreview = document.getElementById('imagePreview');
-  if (delivery.image) {
-    // Formatar a imagem para exibição
-    const imageUrl = delivery.image.startsWith('data:') 
-      ? delivery.image 
-      : `data:image/jpeg;base64,${delivery.image}`;
-      
-    imagePreview.innerHTML = `<img src="${imageUrl}" alt="Preview" class="table-image" onclick="showImageModal(this.src)">`;
-  } else {
-    imagePreview.innerHTML = '';
-  }
-  
-  const form = document.getElementById('deliveryForm');
-  const submitButton = form.querySelector('button[type="submit"]');
-  submitButton.textContent = 'Salvar Edição';
-  
-  // Antes de definir o novo handler, vamos ativar o modo de edição
-  isEditing = true;
-  
-  const originalSubmitHandler = form.onsubmit;
-  
-  form.onsubmit = (event) => {
-    event.preventDefault();
+function createTableRow(delivery) {
+    const row = document.createElement('tr');
     
-    const newOrderNumber = document.getElementById('orderNumber').value.trim();
-    const newDate = document.getElementById('date').value;
+    // Formatar a data
+    const date = new Date(delivery.date);
+    const formattedDate = date.toLocaleDateString('pt-BR');
     
-    // Atualize os dados sem verificar duplicatas durante edição
-    delivery.orderNumber = newOrderNumber;
-    delivery.fee = parseFloat(document.getElementById('fee').value) || 0;
-    delivery.date = newDate;
-    delivery.image = imagePreview.querySelector('img')?.src || null;
+    // Formatar a taxa, garantindo que seja um número
+    const fee = parseFloat(delivery.fee) || 0;
     
-    // Se a imagem estiver no formato de exibição completo (com data:image), otimize
-    if (delivery.image && delivery.image.startsWith('data:image')) {
-      delivery.image = delivery.image.replace(/^data:image\/\w+;base64,/, '');
-    }
+    // Criar células
+    row.innerHTML = `
+        <td>${formattedDate}</td>
+        <td>${delivery.orderNumber}</td>
+        <td>R$ ${fee.toFixed(2)}</td>
+        <td>
+            ${delivery.image ? `
+                <img src="data:image/jpeg;base64,${delivery.image}" 
+                     alt="Comprovante" 
+                     class="table-image"
+                     onclick="showImageModal(this.src)">
+            ` : 'Sem imagem'}
+        </td>
+        <td class="actions">
+            <button onclick="editDelivery('${delivery.id}')" class="button outline">
+                Editar
+            </button>
+            <button onclick="deleteDelivery('${delivery.id}')" class="button outline delete">
+                Excluir
+            </button>
+        </td>
+    `;
     
-    saveDeliveries();
-    
-    // Desativar o modo de edição após salvar
-    isEditing = false;
-    
-    form.reset();
-    imagePreview.innerHTML = '';
-    submitButton.textContent = 'Registrar Entrega';
-    
-    // Restaura o formulário ao estado original
-    form.onsubmit = originalSubmitHandler;
-    document.getElementById('date').value = getCurrentDate();
-    
-    showToast('Entrega atualizada com sucesso!', 'success');
-  };
+    return row;
 }
 
-export function deleteDelivery(index) {
+function createGasTableRow(entry) {
+  const row = document.createElement('tr');
+  
+  // Formatar a data
+  const date = new Date(entry.date);
+  const formattedDate = date.toLocaleDateString('pt-BR');
+  
+  // Formatar o valor
+  const amount = parseFloat(entry.amount) || 0;
+  
+  row.innerHTML = `
+    <td data-label="Data">${formattedDate}</td>
+    <td data-label="Valor">R$ ${amount.toFixed(2)}</td>
+    <td data-label="Ações">
+      <div class="table-actions">
+        <button onclick="deleteGasEntry(${entry.id})" class="button outline delete">
+          Excluir
+        </button>
+      </div>
+    </td>
+  `;
+  
+  return row;
+}
+
+export function deleteDelivery(id) {
+  // Confirma com o usuário antes de excluir
+  if (!confirm('Tem certeza que deseja excluir este pedido?')) {
+    return;
+  }
+
+  const index = deliveries.findIndex(delivery => delivery.id === id);
+  if (index === -1) {
+    showToast('Pedido não encontrado', 'error');
+    return;
+  }
+
   deliveries.splice(index, 1);
   saveDeliveries();
   showToast('Entrega excluída com sucesso!', 'success');
+  
+  // Atualiza a interface
+  updateDeliveriesTable();
+  updateTotals();
 }
 
-export function editGasEntry(index) {
-  const entry = gasEntries[index];
-  
-  document.getElementById('gasDate').value = entry.date;
-  document.getElementById('gasAmount').value = entry.amount;
-  
-  const imagePreview = document.getElementById('gasImagePreview');
-  if (entry.image) {
-    // Formatar a imagem para exibição
-    const imageUrl = entry.image.startsWith('data:') 
-      ? entry.image 
-      : `data:image/jpeg;base64,${entry.image}`;
-      
-    imagePreview.innerHTML = `<img src="${imageUrl}" alt="Preview" class="table-image" onclick="showImageModal(this.src)">`;
-  } else {
-    imagePreview.innerHTML = '';
-  }
-  
-  const form = document.getElementById('gasForm');
-  const submitButton = form.querySelector('button[type="submit"]');
-  submitButton.textContent = 'Salvar Edição';
-  
-  form.onsubmit = (event) => {
-    event.preventDefault();
-    
-    entry.date = document.getElementById('gasDate').value;
-    entry.amount = parseFloat(document.getElementById('gasAmount').value) || 0;
-    entry.image = imagePreview.querySelector('img')?.src || null;
-    
-    // Se a imagem estiver no formato de exibição completo (com data:image), otimize
-    if (entry.image && entry.image.startsWith('data:image')) {
-      entry.image = entry.image.replace(/^data:image\/\w+;base64,/, '');
-    }
-    
+export function deleteGasEntry(id) {
+  const index = gasEntries.findIndex(entry => entry.id === id);
+  if (index !== -1) {
+    gasEntries.splice(index, 1);
     saveGasEntries();
-    
-    form.reset();
-    imagePreview.innerHTML = '';
-    submitButton.textContent = 'Registrar Abastecimento';
-    form.onsubmit = handleGasFormSubmit;
-    document.getElementById('gasDate').value = getCurrentDate();
-    
-    showToast('Registro de gasolina atualizado com sucesso!', 'success');
-  };
+    showToast('Registro de gasolina excluído com sucesso!', 'success');
+  } else {
+    showToast('Registro não encontrado', 'error');
+  }
 }
 
-export function deleteGasEntry(index) {
-  gasEntries.splice(index, 1);
-  saveGasEntries();
-  showToast('Registro de gasolina excluído com sucesso!', 'success');
+export function importData(jsonData) {
+  try {
+    const data = JSON.parse(jsonData);
+    if (data.deliveries) {
+      deliveries = data.deliveries;
+      saveDeliveries();
+    }
+    if (data.gasEntries) {
+      gasEntries = data.gasEntries;
+      saveGasEntries();
+    }
+    updateDeliveriesTable();
+    updateGasTable();
+    updateTotals();
+    renderAnalytics();
+    showToast('Dados importados com sucesso!', 'success');
+  } catch (error) {
+    console.error('Erro ao importar dados:', error);
+    showToast('Erro ao importar dados. Verifique o formato do arquivo.', 'error');
+  }
 } 
