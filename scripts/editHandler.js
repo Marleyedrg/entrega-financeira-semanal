@@ -1,11 +1,7 @@
-import { 
-  deliveries, 
-  saveDeliveries, 
-  getDeliveryById,
-  updateDelivery 
-} from './data.js';
-import { showToast, getCurrentDate } from './utils.js';
+import { showToast } from './utils.js';
 import { processImageForStorage } from './imageUtils.js';
+import { getOrderById, updateOrder } from './orderManager.js';
+import { updateDeliveriesTable } from './data.js';
 
 // Estado do editor
 const state = {
@@ -28,23 +24,26 @@ function setUnsavedChanges(hasChanges) {
   }
 }
 
-export function startEditing(deliveryId) {
-  const delivery = deliveries.find(d => d.id === deliveryId);
-  if (!delivery) return;
+export function startEditing(orderId) {
+  const order = getOrderById(orderId);
+  if (!order) {
+    showToast('Pedido não encontrado', 'error');
+    return;
+  }
 
   // Store current scroll position
   scrollPosition = window.pageYOffset;
   document.body.classList.add('modal-open');
   document.body.style.top = `-${scrollPosition}px`;
 
-  state.currentEditId = deliveryId;
+  state.currentEditId = orderId;
   state.isEditing = true;
   setUnsavedChanges(false);
 
   // Populate form fields
-  document.getElementById('editOrderNumber').value = delivery.orderNumber;
-  document.getElementById('editFee').value = delivery.fee || '';
-  document.getElementById('editDate').value = delivery.date;
+  document.getElementById('editOrderNumber').value = order.orderNumber;
+  document.getElementById('editFee').value = order.fee || '';
+  document.getElementById('editDate').value = order.date;
   
   // Clear previous errors
   document.getElementById('editOrderNumberError').textContent = '';
@@ -54,9 +53,9 @@ export function startEditing(deliveryId) {
   // Show image preview if exists
   const imagePreview = document.getElementById('editImagePreview');
   imagePreview.innerHTML = '';
-  if (delivery.image) {
+  if (order.image) {
     const img = document.createElement('img');
-    img.src = `data:image/jpeg;base64,${delivery.image}`;
+    img.src = `data:image/jpeg;base64,${order.image}`;
     img.alt = 'Preview';
     img.className = 'preview-image';
     imagePreview.appendChild(img);
@@ -121,7 +120,6 @@ function handleModalClick(event) {
       const unsavedChangesNotice = document.getElementById('unsavedChangesNotice');
       unsavedChangesNotice.classList.add('active');
       
-      // Adiciona um timeout para remover a notificação
       setTimeout(() => {
         unsavedChangesNotice.classList.remove('active');
       }, 3000);
@@ -139,7 +137,6 @@ async function handleImageChange(event) {
     const imagePreview = document.getElementById('editImagePreview');
     const imageError = document.getElementById('editImageError');
     
-    // Limpa mensagens de erro anteriores
     imageError.textContent = '';
     imagePreview.innerHTML = `<div class="processing-indicator">Processando imagem...</div>`;
     
@@ -175,58 +172,28 @@ export async function handleEditSubmit(event) {
   const imagePreview = document.getElementById('editImagePreview');
   const image = imagePreview.querySelector('img')?.src;
   
-  // Validation
-  let hasError = false;
-  
-  if (!orderNumber) {
-    document.getElementById('editOrderNumberError').textContent = 'O número do pedido é obrigatório';
-    hasError = true;
-  }
-  
-  if (!date) {
-    document.getElementById('editDateError').textContent = 'A data é obrigatória';
-    hasError = true;
-  }
-  
-  if (!image) {
-    document.getElementById('editImageError').textContent = 'O comprovante é obrigatório';
-    hasError = true;
-  }
-  
-  if (hasError) return;
-  
-  // Check for duplicates (excluding current delivery)
-  if (checkDuplicateDelivery(orderNumber, date, deliveries.filter(d => d.id !== state.currentEditId))) {
-    showToast('Já existe um pedido com este número registrado nesta data!', 'error');
-    return;
-  }
-  
-  // Process image
-  const processedImage = image ? image.replace(/^data:image\/\w+;base64,/, '') : null;
-  
-  // Update delivery
-  const index = deliveries.findIndex(d => d.id === state.currentEditId);
-  if (index !== -1) {
-    deliveries[index] = {
-      ...deliveries[index],
+  try {
+    // Process image
+    const processedImage = image ? image.replace(/^data:image\/\w+;base64,/, '') : null;
+    
+    // Update order
+    const updatedOrder = await updateOrder(state.currentEditId, {
       orderNumber,
-      fee: parseFloat(fee) || 0,
+      fee,
       date,
       image: processedImage
-    };
+    });
     
-    saveDeliveries();
-    updateDeliveriesTable();
-    updateTotals();
-    renderAnalytics();
-    
-    showToast('Entrega atualizada com sucesso!', 'success');
+    showToast('Pedido atualizado com sucesso!', 'success');
     
     // Close modal and restore scroll
     cancelEdit();
     
     // Refresh the table
-    renderDeliveryTable();
+    updateDeliveriesTable();
+  } catch (error) {
+    console.error('Erro ao atualizar pedido:', error);
+    showToast(error.message, 'error');
   }
 }
 

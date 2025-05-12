@@ -8,60 +8,80 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Sistema de Entregas</title>
     
-    <!-- Critical CSS inline -->
+    <!-- Estilos críticos inline para garantir carregamento inicial -->
     <style>
-        body {
-            opacity: 0;
-            transition: opacity 0.2s ease-in;
-        }
-        body.ready {
-            opacity: 1;
-        }
-        .loading-indicator {
+        .loading-screen {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-family: system-ui, -apple-system, sans-serif;
-            color: #16a34a;
-            text-align: center;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease-out;
+        }
+        .loading-screen.fade-out {
+            opacity: 0;
         }
         .loading-spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #16a34a;
-            border-radius: 50%;
             width: 40px;
             height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #16a34a;
+            border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
+        }
+        .container {
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+        .container.loaded {
+            opacity: 1;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
     </style>
-    
-    <!-- Preconnect to external resources -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
-    <!-- Load CSS -->
+
+    <!-- Estilos principais -->
     <link rel="stylesheet" href="styles/index.css">
     <link rel="stylesheet" href="styles/modal.css">
+    <link rel="stylesheet" href="styles/diagnostics.css">
+    
+    <!-- Fonte -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
-    <div class="loading-indicator">
+    <!-- Tela de carregamento -->
+    <div class="loading-screen">
         <div class="loading-spinner"></div>
-        Carregando...
     </div>
+
     <div class="container">
         <header>
             <h1>Registro de Entregas</h1>
             <div class="totals">
-                <div class="total">Taxa: R$ <span id="totalFees">0.00</span></div>
-                <div class="total">Gasolina: R$ <span id="totalGas">0.00</span></div>
-                <div class="total">Lucro: R$ <span id="netProfit">0.00</span></div>
+                <div class="total">
+                    <span class="total-label">Taxa</span>
+                    <span class="total-value">R$ <span id="totalFees">0.00</span></span>
+                </div>
+                <div class="total">
+                    <span class="total-label">Gasolina</span>
+                    <span class="total-value">R$ <span id="totalGas">0.00</span></span>
+                </div>
+                <div class="total">
+                    <span class="total-label">Lucro</span>
+                    <span class="total-value">R$ <span id="netProfit">0.00</span></span>
+                </div>
             </div>
         </header>
 
@@ -80,7 +100,15 @@
                     </div>
                     <div class="form-group">
                         <label for="fee">Taxa de Entrega</label>
-                        <input type="number" id="fee" step="0.01" inputmode="decimal" autocomplete="off">
+                        <input 
+                            type="number" 
+                            id="fee" 
+                            step="0.01" 
+                            min="0" 
+                            placeholder="0.00"
+                            inputmode="decimal" 
+                            autocomplete="off"
+                        >
                     </div>
                     <div class="form-group">
                         <label for="date">Data</label>
@@ -110,14 +138,13 @@
                 <div class="import-export">
                     <input type="file" id="csvInput" accept=".csv" class="hidden">
                     <button id="importButton" class="button outline">Importar</button>
-                    <button type="button" id="backupButton" class="button outline">Backup</button>
                     <button id="finishWeekButton" class="button primary">Finalizar e Limpar</button>
                 </div>
             </div>
 
             <div class="table-container">
                 <table id="deliveriesTable">
-                    <tbody></tbody>
+                    <tbody id="deliveriesTableBody"></tbody>
                 </table>
             </div>
         </div>
@@ -147,7 +174,14 @@
 
             <div class="table-container">
                 <table id="gasTable">
-                    <tbody></tbody>
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Valor</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gasTableBody"></tbody>
                 </table>
             </div>
         </div>
@@ -198,19 +232,22 @@
                     </div>
                 </div>
 
-                <!-- Melhor Dia -->
-                <div class="analytics-card">
-                    <h3>Melhor Dia</h3>
-                    <div class="summary-container" id="bestDay">
-                        <p class="empty-state">Nenhum dado cadastrado</p>
+                <!-- Melhor e Pior Dia - Grid Layout -->
+                <div class="analytics-card-group">
+                    <!-- Melhor Dia -->
+                    <div class="analytics-card">
+                        <h3>Melhor Dia</h3>
+                        <div class="summary-container" id="bestDay">
+                            <p class="empty-state">Nenhum dado cadastrado</p>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Pior Dia -->
-                <div class="analytics-card">
-                    <h3>Pior Dia</h3>
-                    <div class="summary-container" id="worstDay">
-                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    <!-- Pior Dia -->
+                    <div class="analytics-card">
+                        <h3>Pior Dia</h3>
+                        <div class="summary-container" id="worstDay">
+                            <p class="empty-state">Nenhum dado cadastrado</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -268,10 +305,59 @@
 
     <!-- Rodapé com opção de limpeza de dados -->
     <footer class="footer">
-        <button id="clearDataButton" class="button outline danger">Limpar Todos os Dados</button>
+        <div class="footer-buttons">
+            <button id="backupButton" class="button outline">Backup</button>
+            <button id="backupNoGasButton" class="button outline">Backup No Gas</button>
+            <button id="diagnosticButton" class="button outline">
+                <i class="fas fa-stethoscope diagnostic-icon"></i>
+                Diagnóstico de Dados
+            </button>
+            <button id="clearDataButton" class="button outline danger">Limpar Todos os Dados</button>
+        </div>
         <p class="footer-warning">Um backup automático será criado antes da exclusão.</p>
     </footer>
 
-    <script src="scripts/main.js" type="module" defer></script>
+    <!-- Scripts -->
+    <script type="module" src="/scripts/main.js"></script>
+    
+    <!-- Script para gerenciar o carregamento -->
+    <script>
+        // Função para remover a tela de carregamento
+        function hideLoadingScreen() {
+            const loadingScreen = document.querySelector('.loading-screen');
+            const container = document.querySelector('.container');
+            
+            loadingScreen.classList.add('fade-out');
+            container.classList.add('loaded');
+            
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 300);
+        }
+
+        // Evento para quando todos os recursos estiverem carregados
+        window.addEventListener('load', () => {
+            // Pequeno delay para garantir que tudo esteja renderizado
+            setTimeout(hideLoadingScreen, 500);
+        });
+
+        // Fallback caso o evento load não dispare
+        setTimeout(hideLoadingScreen, 2000);
+    </script>
+
+    <script type="module">
+        import { initializeApp } from './scripts/setup.js';
+        import { showDiagnosticModal } from './scripts/dataDiagnostic.js';
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeApp();
+            
+            // Configurar botão de diagnóstico
+            const diagnosticButton = document.getElementById('diagnosticButton');
+            if (diagnosticButton) {
+                diagnosticButton.addEventListener('click', showDiagnosticModal);
+            }
+        });
+    </script>
 </body>
 </html>

@@ -8,9 +8,8 @@ header {
   border-radius: var(--radius-md);
   margin-bottom: var(--spacing-6);
   box-shadow: var(--shadow-sm);
-  position: sticky;
-  top: 0;
-  z-index: 10;
+  position: static;
+  width: 100%;
 }
 
 /* Tabs */
@@ -21,9 +20,6 @@ header {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  position: sticky;
-  top: 70px;
-  z-index: 9;
   background-color: var(--background-color);
   padding: var(--spacing-2) 0;
 }
@@ -140,6 +136,9 @@ header {
   box-shadow: var(--shadow-sm);
   transition: box-shadow var(--transition-fast), transform var(--transition-fast);
   margin-bottom: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  will-change: transform;
 }
 
 .analytics-card:hover {
@@ -153,4 +152,93 @@ header {
   font-size: var(--font-size-lg);
   font-weight: 700;
   text-align: center;
+  position: relative;
+}
+
+/* Novo grupo de cards para lado a lado */
+.analytics-card-group {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-6);
+  margin-bottom: 1.5rem;
+}
+
+/* Otimizações para mobile */
+@media (min-width: 768px) {
+  .analytics-dashboard {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  }
+  
+  .analytics-card-group {
+    grid-template-columns: repeat(2, 1fr);
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 767px) {
+  .analytics-dashboard {
+    padding: var(--spacing-3);
+    gap: var(--spacing-3);
+  }
+  
+  .analytics-card {
+    padding: var(--spacing-3);
+    margin-bottom: var(--spacing-3);
+  }
+  
+  .analytics-card h3 {
+    font-size: var(--font-size-md);
+    margin-bottom: var(--spacing-3);
+  }
+  
+  .analytics-header {
+    padding: var(--spacing-3);
+  }
+  
+  /* Otimizações para evitar reflow e repaint frequentes */
+  .analytics-card,
+  .analytics-card-group,
+  .summary-container {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+}
+
+/* Comportamento para menos re-renderizações */
+.analytics-dashboard.is-scrolling .analytics-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+
+.footer {
+  padding: var(--spacing-4);
+  text-align: center;
+  border-top: 1px solid var(--border-color);
+  margin-top: var(--spacing-8);
+}
+
+.footer-buttons {
+  display: flex;
+  gap: var(--spacing-4);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-4);
+}
+
+.footer-warning {
+  color: var(--text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0;
+}
+
+/* Responsividade para mobile */
+@media (max-width: 640px) {
+  .footer-buttons {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+  
+  .footer-buttons button {
+    width: 100%;
+  }
 } 

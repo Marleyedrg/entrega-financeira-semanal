@@ -2,31 +2,217 @@
 .table-container {
   overflow-x: auto;
   margin: 20px 0;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  background: var(--card-background);
 }
 
 /* Table Styles */
 table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
+  background: var(--card-background);
 }
 
 th, td {
-  padding: 12px;
+  padding: var(--spacing-4);
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
 }
 
 th {
-  background-color: #f8f9fa;
+  background-color: var(--background-alt);
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
+  white-space: nowrap;
 }
 
 td {
-  color: #666;
+  color: var(--text-secondary);
+}
+
+/* Gas Table Specific */
+#gasTable th:nth-child(2),
+#gasTable td:nth-child(2) {
+  text-align: right;
+}
+
+#gasTable th:last-child,
+#gasTable td:last-child {
+  text-align: right;
+  width: 80px;
+}
+
+#gasTable tr:hover {
+  background-color: var(--background-hover);
+}
+
+/* Date Header */
+.date-header {
+  background: var(--background-alt);
+}
+
+.date-cell {
+  padding: var(--spacing-4) var(--spacing-6);
+  font-weight: 600;
+  color: var(--text-primary);
+  background-color: var(--background-alt);
+  font-size: var(--font-size-sm);
+}
+
+/* Table Row Styles */
+tr[data-id] {
+  transition: background-color var(--transition-normal);
+}
+
+tr[data-id]:hover {
+  background-color: var(--background-hover);
+}
+
+/* Cell Styles */
+.fee-cell {
+  font-family: var(--font-mono);
+  text-align: right;
+  white-space: nowrap;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.status-cell {
+  width: 120px;
+}
+
+.actions-cell {
+  display: flex;
+  gap: var(--spacing-2);
+  justify-content: flex-end;
+  width: 120px;
+}
+
+/* Action Buttons */
+.action-button {
+  background: none;
+  border: none;
+  padding: var(--spacing-2);
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all var(--transition-normal);
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.action-button:hover {
+  background-color: var(--background-alt);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.action-button i {
+  font-size: 16px;
+}
+
+.action-button.view-image {
+  color: var(--primary-color);
+}
+
+.action-button.view-image:hover {
+  background-color: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.action-button.edit {
+  color: var(--warning-color);
+}
+
+.action-button.edit:hover {
+  background-color: var(--warning-light);
+  color: var(--warning-dark);
+}
+
+.action-button.delete {
+  color: var(--danger-color);
+}
+
+.action-button.delete:hover {
+  background-color: var(--danger-light);
+  color: var(--danger-dark);
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .table-container {
+    margin: var(--spacing-4) 0;
+    border-radius: var(--radius-md);
+  }
+
+  th, td {
+    padding: var(--spacing-3);
+  }
+
+  .date-cell {
+    padding: var(--spacing-3) var(--spacing-4);
+  }
+
+  .actions-cell {
+    width: auto;
+    min-width: 100px;
+  }
+
+  .status-cell {
+    width: auto;
+  }
+
+  .fee-cell {
+    font-size: var(--font-size-sm);
+  }
+
+  #gasTable th:last-child,
+  #gasTable td:last-child {
+    width: 60px;
+  }
+
+  .action-button {
+    width: 28px;
+    height: 28px;
+    padding: var(--spacing-1);
+  }
+
+  .action-button i {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .table-container {
+    margin: var(--spacing-2) 0;
+  }
+
+  th, td {
+    padding: var(--spacing-2);
+    font-size: var(--font-size-sm);
+  }
+
+  .date-cell {
+    padding: var(--spacing-2) var(--spacing-3);
+  }
+
+  .actions-cell {
+    min-width: 80px;
+  }
+
+  .action-button {
+    padding: var(--spacing-1);
+  }
+
+  #gasTable th:last-child,
+  #gasTable td:last-child {
+    width: 40px;
+  }
 }
 
 /* Table Images */
@@ -40,12 +226,6 @@ td {
 
 .table-image:hover {
   transform: scale(1.1);
-}
-
-/* Table Actions */
-.table-actions {
-  display: flex;
-  gap: 8px;
 }
 
 /* Table Text Styles */

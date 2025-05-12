@@ -6,11 +6,16 @@ import {
   saveGasEntries,
   deleteDelivery,
   deleteGasEntry,
-  loadDeliveries
+  loadDeliveries,
+  loadGasEntries,
+  updateTotals,
+  initializeData,
+  forceSyncData
 } from './data.js';
-import { finishWeek, backupData, clearAllData } from './export.js';
+import { finishWeek, clearAllData, backupData } from './export.js';
 import { importCSV } from './import.js';
 import { processImageForStorage, showImageModal } from './imageUtils.js';
+import { renderAnalytics } from './analytics.js';
 import { 
   startEditing as startDeliveryEditing,
   handleEditSubmit,
@@ -18,166 +23,83 @@ import {
   isEditing as isDeliveryEditing,
   cancelEdit as cancelDeliveryEdit
 } from './editHandler.js';
+import { handleOrderFormSubmit, setupOrderForm, setupGasForm } from './formHandler.js';
+import { initializeMobileOptimizations } from './mobile.js';
+import { initializeSync, getSyncStatus } from './sync.js';
+import { runDiagnostic, repairData } from './dataDiagnostic.js';
 
-// Função para manipular o envio do formulário de entregas
-export function handleDeliveryFormSubmit(event) {
-  // Se estiver em modo de edição, usa o handler de edição
-  if (isDeliveryEditing()) {
-    handleEditSubmit(event);
-    return;
-  }
+// Export all necessary setup functions
+export {
+  setupEditForms,
+  setupTabs,
+  initializeApp,
+  setupOrderForm as setupDeliveryForm,
+  setupGasForm,
+  handleOrderFormSubmit as handleDeliveryFormSubmit
+};
+
+// Função para gerar dados aleatórios para teste
+function generateRandomData(days = 7) {
+  // Helper para gerar número aleatório entre min e max
+  const randomNumber = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
   
-  event.preventDefault();
-  
-  const orderNumber = document.getElementById('orderNumber').value.trim();
-  const fee = document.getElementById('fee').value;
-  const date = document.getElementById('date').value;
-  const imagePreview = document.getElementById('imagePreview');
-  const image = imagePreview.querySelector('img')?.src;
-  
-  // Validação dos campos
-  let hasError = false;
-
-  if (!orderNumber) {
-    showToast('O número do pedido é obrigatório!', 'error');
-    hasError = true;
-  }
-
-  if (!date) {
-    showToast('A data é obrigatória!', 'error');
-    hasError = true;
-  }
-
-  if (!image) {
-    document.getElementById('imageError').textContent = 'O comprovante é obrigatório';
-    showToast('O comprovante é obrigatório!', 'error');
-    hasError = true;
-  } else {
-    document.getElementById('imageError').textContent = '';
-  }
-
-  if (hasError) return;
-
-  // Verifica duplicatas
-  if (checkDuplicateDelivery(orderNumber, date, deliveries)) {
-    showToast('Já existe um pedido com este número registrado nesta data!', 'error');
-    return;
-  }
-
-  // Processa a imagem para armazenamento
-  const processedImage = image ? image.replace(/^data:image\/\w+;base64,/, '') : null;
-  
-  const newDelivery = {
-    date,
-    orderNumber,
-    fee: parseFloat(fee) || 0,
-    image: processedImage,
-    id: String(Date.now()) // Garante ID único
+  // Helper para gerar data aleatória nos últimos X dias
+  const randomDate = (daysAgo) => {
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    return date.toISOString().split('T')[0];
   };
-  
-  deliveries.push(newDelivery);
+
+  // Limpar dados existentes
+  deliveries.length = 0;
+  gasEntries.length = 0;
+
+  // Gerar entregas para cada dia
+  for (let i = 0; i < days; i++) {
+    const date = randomDate(i);
+    const numDeliveries = randomNumber(3, 8); // 3 a 8 entregas por dia
+    
+    // Gerar entregas para este dia
+    for (let j = 0; j < numDeliveries; j++) {
+      const fee = parseFloat(randomNumber(5, 15).toFixed(2));
+      const delivery = {
+        id: `${Date.now()}-${i}-${j}`,
+        date: date,
+        orderNumber: `${randomNumber(1000, 9999)}`,
+        fee: fee,
+        image: null,
+        status: fee > 0 ? 'completed' : 'pending'
+      };
+      deliveries.push(delivery);
+    }
+
+    // 50% de chance de ter abastecimento neste dia
+    if (Math.random() > 0.5) {
+      const gasEntry = {
+        id: `gas-${Date.now()}-${i}`,
+        date: date,
+        amount: parseFloat(randomNumber(30, 70).toFixed(2)),
+        image: null
+      };
+      gasEntries.push(gasEntry);
+    }
+  }
+
+  // Salvar dados
   saveDeliveries();
+  saveGasEntries();
+  updateTotals();
   
-  // Limpa o formulário
-  event.target.reset();
-  imagePreview.innerHTML = '';
-  document.getElementById('date').value = getCurrentDate();
-  document.getElementById('imageError').textContent = '';
+  showToast(`Dados aleatórios gerados para ${days} dias!`, 'success');
   
-  showToast('Entrega registrada com sucesso!', 'success');
-}
-
-// Função para configurar o formulário de gasolina
-export function setupGasForm() {
-  const gasForm = document.getElementById('gasForm');
-  const gasDateInput = document.getElementById('gasDate');
-  
-  gasDateInput.value = getCurrentDate();
-  
-  gasForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-    
-    const date = document.getElementById('gasDate').value;
-    const amount = document.getElementById('gasAmount').value;
-    
-    if (!date || !amount) {
-      showToast('Por favor, preencha todos os campos obrigatórios', 'error');
-      return;
-    }
-    
-    const newGasEntry = {
-      id: Date.now().toString(),
-      date,
-      amount: parseFloat(amount) || 0
-    };
-    
-    gasEntries.push(newGasEntry);
-    saveGasEntries();
-    
-    event.target.reset();
-    gasDateInput.value = getCurrentDate();
-    
-    showToast('Abastecimento registrado com sucesso!', 'success');
-  });
-}
-
-// Função para configurar o formulário de entregas
-export function setupDeliveryForm() {
-  const deliveryForm = document.getElementById('deliveryForm');
-  const uploadButton = document.getElementById('uploadButton');
-  const imageInput = document.getElementById('image');
-  const dateInput = document.getElementById('date');
-  
-  dateInput.value = getCurrentDate();
-  
-  // Remove qualquer handler existente
-  deliveryForm.onsubmit = null;
-  
-  // Adiciona o novo handler
-  deliveryForm.addEventListener('submit', handleDeliveryFormSubmit);
-  
-  uploadButton.addEventListener('click', () => {
-    imageInput.click();
-  });
-  
-  imageInput.addEventListener('change', async (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      try {
-        const imagePreview = document.getElementById('imagePreview');
-        imagePreview.innerHTML = `<div class="processing-indicator"></div> Processando imagem...`;
-        showToast('Processando imagem...', 'info');
-        
-        const compressedImage = await processImageForStorage(file);
-        
-        if (compressedImage) {
-          imagePreview.innerHTML = `
-            <div class="image-preview-item">
-              <img src="${compressedImage}" alt="Preview" class="preview-image">
-              <button type="button" class="delete-image" onclick="clearDeliveryImage()">×</button>
-            </div>
-          `;
-          document.getElementById('imageError').textContent = '';
-          showToast('Imagem carregada com sucesso!', 'success');
-        }
-      } catch (error) {
-        document.getElementById('imagePreview').innerHTML = '';
-        document.getElementById('imageError').textContent = 'Erro ao processar a imagem';
-        showToast('Erro ao processar a imagem', 'error');
-        console.error(error);
-      }
-    }
-  });
-
-  // Adiciona função global para limpar imagem
-  window.clearDeliveryImage = () => {
-    document.getElementById('imagePreview').innerHTML = '';
-    document.getElementById('imageError').textContent = 'O comprovante é obrigatório';
+  return {
+    totalDeliveries: deliveries.length,
+    totalGasEntries: gasEntries.length
   };
 }
 
 // Função para configurar os formulários de edição
-export function setupEditForms() {
+function setupEditForms() {
   const modal = document.getElementById('imageModal');
   const closeButton = modal.querySelector('.close');
   
@@ -195,16 +117,22 @@ export function setupEditForms() {
     finishWeekButton.title = "Exportar dados e limpar todas as entregas";
   }
 
-  const backupButton = document.getElementById('backupButton');
-  if (backupButton) {
-    backupButton.addEventListener('click', backupData);
-    backupButton.title = "Fazer backup sem limpar os dados";
-  }
-
   const clearDataButton = document.getElementById('clearDataButton');
   if (clearDataButton) {
     clearDataButton.addEventListener('click', clearAllData);
-    clearDataButton.title = "Limpar todos os dados sem exportá-los";
+    clearDataButton.title = "Limpar todos os dados";
+  }
+
+  const backupButton = document.getElementById('backupButton');
+  if (backupButton) {
+    backupButton.addEventListener('click', backupData);
+    backupButton.title = "Fazer backup dos dados";
+  }
+
+  const backupNoGasButton = document.getElementById('backupNoGasButton');
+  if (backupNoGasButton) {
+    backupNoGasButton.addEventListener('click', () => backupData(false));
+    backupNoGasButton.title = "Fazer backup sem dados de gasolina";
   }
 
   const importButton = document.getElementById('importButton');
@@ -218,16 +146,40 @@ export function setupEditForms() {
     csvInput.addEventListener('change', importCSV);
   }
 
+  // Setup storage event listener to handle changes from other tabs
+  window.addEventListener('storage', (event) => {
+    if (event.key === 'deliveries' || event.key === 'gasEntries') {
+      loadDeliveries();
+      loadGasEntries();
+    }
+  });
+
   // Atualizar as funções globais
   window.editDelivery = startDeliveryEditing;
   window.deleteDelivery = deleteDelivery;
   window.deleteGasEntry = deleteGasEntry;
   window.showImageModal = showImageModal;
   window.cancelDeliveryEdit = cancelDeliveryEdit;
+
+  // Adicionar função de teste à window
+  window.generateTestData = (days) => {
+    try {
+      const result = generateRandomData(days);
+      console.log('Dados gerados:', result);
+      return result;
+    } catch (error) {
+      console.error('Erro ao gerar dados:', error);
+      showToast('Erro ao gerar dados de teste', 'error');
+    }
+  };
+
+  // Carrega os dados iniciais
+  loadDeliveries();
+  renderAnalytics();
 }
 
 // Função para configurar as tabs
-export function setupTabs() {
+function setupTabs() {
   const tabs = document.querySelectorAll('.tab-button');
   const contents = document.querySelectorAll('.tab-content');
 
@@ -247,7 +199,7 @@ export function setupTabs() {
         if (deliveries.length === 0) {
           showToast('Nenhuma entrega registrada para análise', 'info');
         }
-        renderAnalytics(); // Sempre renderiza ao abrir a aba
+        renderAnalytics();
       }
     });
   });
@@ -329,4 +281,165 @@ const setAppHeight = () => {
     document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
 };
 window.addEventListener('resize', setAppHeight);
-setAppHeight(); 
+setAppHeight();
+
+// Função para inicializar a aplicação
+function initializeApp() {
+  console.time('Inicialização da Aplicação');
+  
+  // Inicializar sistema de sincronização entre abas
+  const syncStatus = initializeSync();
+  console.log('Sistema de sincronização inicializado:', syncStatus.sessionId);
+  
+  // Carrega dados do localStorage
+  initializeData();
+  
+  // Verificar integridade dos dados automaticamente durante a inicialização
+  checkDataIntegrityOnStartup();
+  
+  // Garante que todas as entregas têm status definidos
+  deliveries.forEach(delivery => {
+    if (!delivery.status) {
+      delivery.status = parseFloat(delivery.fee) > 0 ? 'completed' : 'pending';
+    }
+  });
+  saveDeliveries();
+  
+  // Configura formulários
+  setupOrderForm();
+  setupGasForm();
+  setupEditForms();
+  setupTabs();
+  
+  // Inicializa otimizações para dispositivos móveis
+  initializeMobileOptimizations();
+  
+  // Configura eventos globais
+  window.showImageModal = showImageModal;
+  window.deleteDelivery = deleteDelivery;
+  window.deleteGasEntry = deleteGasEntry;
+  window.editDelivery = startDeliveryEditing;
+  window.handleEditSubmit = handleEditSubmit;
+  window.handleCancelEdit = handleCancelEdit;
+  window.importCSV = importCSV;
+  window.forceSyncData = forceSyncData;
+  window.getSyncStatus = getSyncStatus;
+  window.runDiagnostic = runDiagnostic;
+  
+  // Configura o botão de fechar modal
+  const closeButton = document.querySelector('.close');
+  if (closeButton) {
+    closeButton.addEventListener('click', () => {
+      const modal = document.getElementById('imageModal');
+      if (modal) modal.style.display = 'none';
+    });
+  }
+  
+  // Adicionar indicador de sincronização no rodapé
+  setupSyncIndicator();
+  
+  console.timeEnd('Inicialização da Aplicação');
+}
+
+/**
+ * Verifica e repara problemas de integridade durante a inicialização
+ */
+function checkDataIntegrityOnStartup() {
+  // Verificar se é a primeira vez que o usuário abre a aplicação nesta sessão
+  if (!sessionStorage.getItem('integrity_checked')) {
+    // Executar diagnóstico sem mostrar toast para o usuário
+    const diagnostic = runDiagnostic(false);
+    
+    // Se houver problemas, tentar reparar automaticamente
+    if (!diagnostic.result.isValid) {
+      const totalIssues = diagnostic.result.deliveries.invalidItems.length + 
+                          diagnostic.result.gasEntries.invalidItems.length;
+      
+      if (totalIssues > 0) {
+        // Realizar o reparo automaticamente
+        const repairResult = repairData(diagnostic.result);
+        
+        if (repairResult.success) {
+          console.log(`Reparados automaticamente ${repairResult.fixed}/${totalIssues} problemas de integridade.`);
+          
+          // Notificar o usuário apenas se houver problemas não reparados
+          if (repairResult.fixed < totalIssues) {
+            setTimeout(() => {
+              showToast(`Alguns problemas de integridade (${totalIssues - repairResult.fixed}/${totalIssues}) não puderam ser reparados automaticamente. Use o Diagnóstico de Dados para mais informações.`, 'warning');
+            }, 1500);
+          }
+        } else {
+          // Se não foi possível reparar, apenas registrar no console
+          console.warn('Não foi possível reparar automaticamente os problemas de integridade.');
+        }
+      }
+    }
+    
+    // Marcar que a verificação de integridade já foi feita nesta sessão
+    sessionStorage.setItem('integrity_checked', 'true');
+  }
+}
+
+// Função para adicionar indicador de sincronização
+function setupSyncIndicator() {
+  const footer = document.querySelector('.footer');
+  
+  if (footer) {
+    const syncIndicator = document.createElement('div');
+    syncIndicator.className = 'sync-indicator';
+    syncIndicator.innerHTML = `
+      <span class="sync-status"></span>
+      <span class="sync-text">Sincronização automática ativada</span>
+    `;
+    
+    footer.appendChild(syncIndicator);
+    
+    // Atualizar status periodicamente
+    updateSyncStatus();
+    setInterval(updateSyncStatus, 10000);
+    
+    // Sincronização manual ao clicar no indicador
+    syncIndicator.addEventListener('click', () => {
+      syncIndicator.classList.add('syncing');
+      forceSyncData();
+      showToast('Sincronizando dados...', 'info');
+      
+      setTimeout(() => {
+        syncIndicator.classList.remove('syncing');
+        updateSyncStatus();
+      }, 1000);
+    });
+  }
+}
+
+// Função para atualizar o indicador de sincronização
+function updateSyncStatus() {
+  const status = getSyncStatus();
+  const indicator = document.querySelector('.sync-status');
+  const text = document.querySelector('.sync-text');
+  
+  if (indicator && text) {
+    const isActive = status.isPrimary;
+    const lastSync = status.lastSyncTime ? new Date(status.lastSyncTime) : null;
+    const now = new Date();
+    
+    indicator.className = 'sync-status ' + (isActive ? 'active' : 'passive');
+    
+    if (lastSync) {
+      const timeDiff = Math.floor((now - lastSync) / 1000);
+      let timeText = '';
+      
+      if (timeDiff < 60) {
+        timeText = `${timeDiff}s atrás`;
+      } else if (timeDiff < 3600) {
+        timeText = `${Math.floor(timeDiff / 60)}m atrás`;
+      } else {
+        timeText = `${Math.floor(timeDiff / 3600)}h atrás`;
+      }
+      
+      text.textContent = `Última sincronização: ${timeText}`;
+    } else {
+      text.textContent = isActive ? 'Aba principal' : 'Sincronização automática ativada';
+    }
+  }
+} 

@@ -214,31 +214,23 @@ export function formatImageDisplay(imageSrc) {
 }
 
 /**
- * Display modal with full-size image
- * @param {string} src - Image source
+ * Display an image in a modal
+ * @param {string} src - Base64 image data
  */
 export function showImageModal(src) {
+  if (!src) return;
+  
   const modal = document.getElementById('imageModal');
   const modalImg = document.getElementById('modalImage');
   
-  if (!modal || !modalImg) return;
+  // Add data URL prefix if not present
+  const imageUrl = src.startsWith('data:image') ? src : `data:image/jpeg;base64,${src}`;
   
+  modalImg.src = imageUrl;
   modal.style.display = 'block';
   
-  // Check if image needs conversion (optimized format without header)
-  if (src && !src.startsWith('data:')) {
-    modalImg.src = `data:image/jpeg;base64,${src}`;
-  } else {
-    modalImg.src = src;
-  }
-  
-  // Add responsive sizing for mobile
-  if (isMobileDevice()) {
-    modalImg.style.maxWidth = '90vw';
-    modalImg.style.maxHeight = '80vh';
-  }
-  
+  // Add show class after a small delay to trigger transition
   setTimeout(() => {
     modal.classList.add('show');
-  }, 100);
+  }, 10);
 } 
