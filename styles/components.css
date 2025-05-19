@@ -938,6 +938,7 @@ header {
   margin-bottom: var(--spacing-4);
   position: static;
   width: 100%;
+  z-index: 1000;
 }
 
 @media (max-width: 480px) {

@@ -221,128 +221,53 @@ export function updateTotals() {
 
 // Função para atualizar a tabela de entregas
 export function updateDeliveriesTable() {
-  const tableBody = document.getElementById('deliveriesTableBody');
-  if (!tableBody) return;
+  const tbody = document.getElementById('deliveriesTableBody');
+  if (!tbody) return;
 
-  // Garante que os dados estão ordenados
-  sortDeliveries();
-
-  // Garante que todas as entregas têm um status definido
+  tbody.innerHTML = '';
+  
   deliveries.forEach(delivery => {
-    if (!delivery.status) {
-      delivery.status = parseFloat(delivery.fee) > 0 ? 'completed' : 'pending';
-    }
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${delivery.orderNumber}</td>
+      <td>R$ ${parseFloat(delivery.fee).toFixed(2)}</td>
+      <td>${formatDate(delivery.date)}</td>
+      <td>
+        <button class="action-button" onclick="showImageModal('${delivery.image}')" title="Ver imagem">
+          <i class="fas fa-image"></i>
+        </button>
+        <button class="action-button" onclick="editDelivery('${delivery.id}')" title="Editar">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="action-button delete" onclick="deleteDelivery('${delivery.id}')" title="Excluir">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
   });
-
-  // Agrupa entregas por data
-  const groupedDeliveries = {};
-  deliveries.forEach(delivery => {
-    if (!groupedDeliveries[delivery.date]) {
-      groupedDeliveries[delivery.date] = [];
-    }
-    groupedDeliveries[delivery.date].push(delivery);
-  });
-
-  // Ordena as datas em ordem decrescente
-  const sortedDates = Object.keys(groupedDeliveries).sort((a, b) => new Date(b) - new Date(a));
-
-  let html = '';
-  let currentDate = '';
-
-  sortedDates.forEach(date => {
-    const dayDeliveries = groupedDeliveries[date];
-    
-    dayDeliveries.forEach((delivery, index) => {
-      const isNewDate = date !== currentDate;
-      currentDate = date;
-      
-      if (isNewDate) {
-        html += `
-          <tr class="date-header">
-            <td colspan="5" class="date-cell">
-              ${formatDate(date)} (${getWeekdayName(date)})
-            </td>
-          </tr>
-        `;
-      }
-
-      const statusClass = delivery.status === 'pending' ? 'status-pending' : 'status-completed';
-      const statusText = delivery.status === 'pending' ? 'Pendente' : 'Finalizado';
-      
-      html += `
-        <tr data-id="${delivery.id}">
-          <td>${delivery.orderNumber}</td>
-          <td class="fee-cell">R$ ${formatCurrency(delivery.fee)}</td>
-          <td>
-            <span class="status-badge ${statusClass}" title="${statusText}">
-              ${statusText}
-            </span>
-          </td>
-          <td class="actions-cell">
-            ${delivery.image ? `
-              <button 
-                type="button" 
-                class="action-button view-image" 
-                onclick="showImageModal('${delivery.image}')"
-                title="Ver comprovante"
-              >
-                <i class="fas fa-image"></i>
-              </button>
-            ` : ''}
-            <button 
-              type="button" 
-              class="action-button edit" 
-              onclick="editDelivery('${delivery.id}')"
-              title="Editar entrega"
-            >
-              <i class="fas fa-edit"></i>
-            </button>
-            <button 
-              type="button" 
-              class="action-button delete" 
-              onclick="deleteDelivery('${delivery.id}')"
-              title="Excluir entrega"
-            >
-              <i class="fas fa-trash"></i>
-            </button>
-          </td>
-        </tr>
-      `;
-    });
-  });
-
-  tableBody.innerHTML = html;
 }
 
 // Função para atualizar a tabela de gasolina
 export function updateGasTable() {
-  const tableBody = document.getElementById('gasTableBody');
-  if (!tableBody) return;
+  const tbody = document.getElementById('gasTableBody');
+  if (!tbody) return;
 
-  // Ordena por data (mais recentes primeiro)
-  gasEntries.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-  let html = '';
+  tbody.innerHTML = '';
+  
   gasEntries.forEach(entry => {
-    html += `
-      <tr data-id="${entry.id}">
-        <td>${formatDate(entry.date)}</td>
-        <td class="fee-cell">R$ ${formatCurrency(entry.amount)}</td>
-        <td class="actions-cell">
-          <button 
-            type="button" 
-            class="action-button delete" 
-            onclick="deleteGasEntry('${entry.id}')"
-            title="Excluir registro"
-          >
-            <i class="fas fa-trash"></i>
-          </button>
-        </td>
-      </tr>
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${formatDate(entry.date)}</td>
+      <td>R$ ${parseFloat(entry.amount).toFixed(2)}</td>
+      <td>
+        <button class="action-button delete" onclick="deleteGasEntry('${entry.id}')" title="Excluir">
+          <i class="fas fa-trash"></i>
+        </button>
+      </td>
     `;
+    tbody.appendChild(tr);
   });
-
-  tableBody.innerHTML = html;
 }
 
 // Função para adicionar uma nova entrega

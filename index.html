@@ -51,6 +51,7 @@
     <link rel="stylesheet" href="styles/index.css">
     <link rel="stylesheet" href="styles/modal.css">
     <link rel="stylesheet" href="styles/diagnostics.css">
+    <link rel="stylesheet" href="styles/sepia-theme.css">
     
     <!-- Fonte -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -260,6 +261,11 @@
             <span class="close">&times;</span>
             <img id="modalImage" alt="Comprovante em alta resolução">
         </div>
+        <div class="zoom-controls">
+            <button id="zoomOut" title="Reduzir zoom">-</button>
+            <span class="zoom-level">100%</span>
+            <button id="zoomIn" title="Aumentar zoom">+</button>
+        </div>
     </div>
 
     <!-- Modal de edição -->
@@ -306,8 +312,10 @@
     <!-- Rodapé com opção de limpeza de dados -->
     <footer class="footer">
         <div class="footer-buttons">
-            <button id="backupButton" class="button outline">Backup</button>
-            <button id="backupNoGasButton" class="button outline">Backup No Gas</button>
+            <button id="exportButton" class="button outline">
+                <i class="fas fa-file-export"></i>
+                Exportar CSV
+            </button>
             <button id="diagnosticButton" class="button outline">
                 <i class="fas fa-stethoscope diagnostic-icon"></i>
                 Diagnóstico de Dados

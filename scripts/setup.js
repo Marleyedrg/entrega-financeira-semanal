@@ -123,18 +123,6 @@ function setupEditForms() {
     clearDataButton.title = "Limpar todos os dados";
   }
 
-  const backupButton = document.getElementById('backupButton');
-  if (backupButton) {
-    backupButton.addEventListener('click', backupData);
-    backupButton.title = "Fazer backup dos dados";
-  }
-
-  const backupNoGasButton = document.getElementById('backupNoGasButton');
-  if (backupNoGasButton) {
-    backupNoGasButton.addEventListener('click', () => backupData(false));
-    backupNoGasButton.title = "Fazer backup sem dados de gasolina";
-  }
-
   const importButton = document.getElementById('importButton');
   const csvInput = document.getElementById('csvInput');
   

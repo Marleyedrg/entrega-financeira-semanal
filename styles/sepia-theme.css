@@ -1,0 +1,539 @@
+/* Variáveis de cores para tema sépia - Alto Contraste */
+:root {
+    /* Cores principais */
+    --sepia-bg-primary: #f8f4ea;
+    --sepia-bg-secondary: #eee4d0;
+    --sepia-bg-tertiary: #dac9a8;
+    
+    /* Cores de texto - Mais escuras para melhor contraste */
+    --sepia-text-primary: #222222;
+    --sepia-text-secondary: #333333;
+    --sepia-text-tertiary: #555555;
+    
+    /* Cores de destaque - Mais contrastantes */
+    --sepia-accent-primary: #8b4513;
+    --sepia-accent-secondary: #703712;
+    --sepia-accent-tertiary: #552a0c;
+    
+    /* Cores de alerta - Maior contraste */
+    --sepia-error: #9b0000;
+    --sepia-warning: #964b00;
+    --sepia-success: #006400;
+    
+    /* Cores de interface */
+    --sepia-border: #b19b7c;
+    --sepia-shadow: rgba(59, 43, 27, 0.25);
+    --sepia-overlay: rgba(59, 43, 27, 0.75);
+}
+
+/* Aplicar tema sépia - Fundo */
+html {
+    background-color: #e8d8c3; /* Fundo sépia mais escuro e envolvente */
+}
+
+body {
+    background-color: #e8d8c3; /* Mesmo tom para o body */
+    color: var(--sepia-text-primary);
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23d5c4a9' fill-opacity='0.3' fill-rule='evenodd'/%3E%3C/svg%3E");
+    background-attachment: fixed;
+}
+
+.container {
+    background-color: rgba(232, 216, 195, 0.7); /* Fundo com opacidade para o contêiner principal */
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(89, 73, 63, 0.1);
+    overflow: hidden;
+    margin: 1rem auto;
+    max-width: 1200px;
+}
+
+/* Cabeçalho */
+header {
+    background-color: #d5c4a9; /* Tom sépia mais escuro para o cabeçalho */
+    border-bottom: 1px solid var(--sepia-border);
+    padding: 1.5rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1rem;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+h1, h2, h3 {
+    color: var(--sepia-text-primary);
+    font-weight: 600;
+}
+
+/* Tabs */
+.tabs {
+    background-color: #d5c4a9; /* Combina com o cabeçalho */
+    border-bottom: 1px solid var(--sepia-border);
+    padding: 0 1rem;
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.tab-button {
+    color: #3d2e1c; /* Texto mais escuro para melhor contraste */
+    background-color: transparent;
+    font-weight: 500;
+    padding: 1rem 1.5rem;
+    border-bottom: 3px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.tab-button.active {
+    color: var(--sepia-accent-primary);
+    border-bottom-color: var(--sepia-accent-primary);
+    font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.tab-button:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Áreas de conteúdo */
+.tab-content {
+    background-color: rgba(245, 240, 230, 0.9);
+    border-radius: 8px;
+    margin: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Formulários */
+.form-container {
+    background-color: var(--sepia-bg-secondary);
+    border: 1px solid var(--sepia-border);
+    box-shadow: 0 2px 4px var(--sepia-shadow);
+}
+
+.form-group label {
+    color: var(--sepia-text-primary);
+    font-weight: 500;
+}
+
+.form-group input {
+    background-color: #ffffff;
+    border: 1px solid var(--sepia-border);
+    color: black;
+}
+
+.form-group input:focus {
+    border-color: var(--sepia-accent-primary);
+    box-shadow: 0 0 0 2px rgba(139, 69, 19, 0.3);
+}
+
+/* Botões */
+.button, 
+button, 
+input[type="button"], 
+input[type="submit"],
+.footer-buttons .button,
+.modal-actions button {
+    background-color: var(--sepia-bg-tertiary) !important;
+    color: var(--sepia-text-primary) !important;
+    border: 1px solid var(--sepia-border) !important;
+}
+
+.button.primary, 
+button.primary, 
+input[type="button"].primary, 
+input[type="submit"].primary,
+.btn-update {
+    background-color: var(--sepia-accent-primary) !important;
+    color: white !important;
+    border: 1px solid var(--sepia-accent-primary) !important;
+}
+
+.button.danger, 
+button.danger, 
+input[type="button"].danger, 
+input[type="submit"].danger {
+    background-color: var(--sepia-error) !important;
+    color: white !important;
+    border: 1px solid var(--sepia-error) !important;
+}
+
+.button:hover, 
+button:hover, 
+input[type="button"]:hover, 
+input[type="submit"]:hover {
+    filter: brightness(0.95);
+}
+
+.button.primary:hover, 
+button.primary:hover, 
+input[type="button"].primary:hover, 
+input[type="submit"].primary:hover,
+.btn-update:hover {
+    background-color: var(--sepia-accent-secondary) !important;
+    filter: none;
+}
+
+.button.danger:hover, 
+button.danger:hover, 
+input[type="button"].danger:hover, 
+input[type="submit"].danger:hover {
+    background-color: #7a0000 !important;
+    filter: none;
+}
+
+.button.outline, 
+button.outline, 
+input[type="button"].outline, 
+input[type="submit"].outline {
+    background-color: transparent !important;
+    color: var(--sepia-text-primary) !important;
+    border: 1px solid var(--sepia-border) !important;
+}
+
+.button.outline:hover, 
+button.outline:hover, 
+input[type="button"].outline:hover, 
+input[type="submit"].outline:hover {
+    background-color: var(--sepia-bg-tertiary) !important;
+    color: var(--sepia-text-primary) !important;
+}
+
+/* Footer e Botões de Backup */
+.footer {
+    background-color: var(--sepia-bg-secondary);
+    border-top: 1px solid var(--sepia-border);
+    padding: 15px;
+}
+
+.footer-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.footer-buttons .button {
+    background-color: var(--sepia-bg-tertiary);
+    color: var(--sepia-text-primary);
+    border: 1px solid var(--sepia-border);
+    min-width: 120px;
+    text-align: center;
+}
+
+.footer-buttons .button:hover {
+    background-color: var(--sepia-accent-primary);
+    color: white;
+}
+
+.footer-buttons .button.outline {
+    background-color: var(--sepia-bg-tertiary);
+    color: var(--sepia-text-primary);
+    border: 1px solid var(--sepia-border);
+}
+
+.footer-buttons .button.danger {
+    background-color: var(--sepia-error);
+    color: white;
+    border: 1px solid var(--sepia-error);
+}
+
+.footer-buttons .button.danger:hover {
+    background-color: #7a0000;
+}
+
+.footer-warning {
+    color: var(--sepia-text-secondary);
+    text-align: center;
+    margin-top: 10px;
+    font-size: 0.9rem;
+}
+
+/* Tabelas */
+.table-container {
+    background-color: var(--sepia-bg-secondary);
+    border: 1px solid var(--sepia-border);
+    box-shadow: 0 2px 4px var(--sepia-shadow);
+}
+
+table {
+    color: var(--sepia-text-primary);
+}
+
+th {
+    background-color: var(--sepia-bg-tertiary);
+    color: var(--sepia-text-primary);
+    font-weight: 600;
+}
+
+td {
+    border-bottom: 1px solid var(--sepia-border);
+}
+
+tr:hover {
+    background-color: var(--sepia-bg-tertiary);
+}
+
+/* Cards e Containers */
+.analytics-card {
+    background-color: var(--sepia-bg-secondary);
+    border: 1px solid var(--sepia-border);
+    box-shadow: 0 2px 4px var(--sepia-shadow);
+}
+
+.metric-card {
+    background-color: #ffffff;
+}
+
+.metric-value {
+    color: var(--sepia-text-primary);
+    font-weight: 600;
+}
+
+.metric-label {
+    color: var(--sepia-text-secondary);
+}
+
+/* Modal */
+.modal-overlay {
+    background-color: var(--sepia-overlay);
+}
+
+.edit-modal {
+    background-color: var(--sepia-bg-secondary);
+    border: 1px solid var(--sepia-border);
+    box-shadow: 0 4px 8px var(--sepia-shadow);
+}
+
+.modal-actions {
+    background-color: var(--sepia-bg-secondary);
+    border-top: 1px solid var(--sepia-border);
+}
+
+/* Status e Badges */
+.status-badge {
+    background-color: var(--sepia-bg-tertiary);
+    font-weight: 600;
+}
+
+.status-badge.completed {
+    background-color: var(--sepia-success);
+    color: white;
+}
+
+.status-badge.pending {
+    background-color: var(--sepia-warning);
+    color: white;
+}
+
+/* Totais */
+.totals {
+    background-color: #8b6b4c; /* Fundo sépia mais escuro para maior contraste com texto branco */
+    box-shadow: 0 2px 4px var(--sepia-shadow);
+    border: 1px solid var(--sepia-border);
+    border-radius: 8px;
+    margin: 1rem 0;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-around;
+}
+
+.total {
+    border-right: 1px solid rgba(255, 255, 255, 0.2); /* Separador mais suave */
+    padding: 0 1.5rem;
+    text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.total:last-child {
+    border-right: none;
+}
+
+.total-label {
+    color: white;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.total-value {
+    color: white;
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+#totalFees, #totalGas {
+    font-weight: 700;
+    color: white;
+}
+
+#netProfit.total-profit {
+    color: #90EE90; /* Verde mais claro para contrastar melhor com o fundo */
+    font-weight: 700;
+}
+
+#netProfit.total-loss {
+    color: #FF6B6B; /* Vermelho mais claro para contrastar melhor com o fundo */
+    font-weight: 700;
+}
+
+/* Ajustes de contraste para acessibilidade */
+.error-message {
+    color: var(--sepia-error);
+    font-weight: 600;
+}
+
+.success-message {
+    color: var(--sepia-success);
+    font-weight: 600;
+}
+
+/* Ajustes para gráficos */
+.chart-container {
+    background-color: #ffffff;
+    border: 1px solid var(--sepia-border);
+    box-shadow: 0 2px 4px var(--sepia-shadow);
+}
+
+/* Ajustes para dispositivos móveis */
+@media (max-width: 768px) {
+    .action-button {
+        color: var(--sepia-text-primary);
+    }
+
+    .action-button:hover {
+        color: var(--sepia-accent-primary);
+    }
+
+    .action-button.delete:hover {
+        color: var(--sepia-error);
+    }
+
+    .totals {
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 0.75rem;
+    }
+    
+    .total {
+        padding: 0.75rem 1rem;
+        min-width: 100px;
+    }
+    
+    .total-label {
+        font-size: 0.8rem;
+    }
+    
+    .total-value {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .totals {
+        flex-direction: column;
+        align-items: center;
+        padding: 0.5rem;
+    }
+    
+    .total {
+        border-right: none;
+        border-bottom: 1px solid var(--sepia-border);
+        padding: 0.75rem 0;
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    
+    .total:last-child {
+        border-bottom: none;
+    }
+    
+    .total-label, .total-value {
+        margin: 0;
+        padding: 0 0.5rem;
+    }
+}
+
+/* Botão de exportação */
+#exportButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 140px;
+  transition: all 0.2s ease;
+}
+
+#exportButton i {
+  font-size: 0.9rem;
+}
+
+#exportButton:hover {
+  background-color: var(--sepia-accent-primary) !important;
+  color: white !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Ajustes para estilos no modal de exportação */
+.export-options input[type="checkbox"] {
+  accent-color: var(--sepia-accent-primary);
+}
+
+.export-options .date-filter input[type="date"] {
+  background-color: #ffffff;
+  border: 1px solid var(--sepia-border);
+  color: var(--sepia-text-primary);
+}
+
+.export-options .date-filter input[type="date"]:focus {
+  border-color: var(--sepia-accent-primary);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(139, 69, 19, 0.2);
+}
+
+@media (max-width: 768px) {
+  #exportButton {
+    min-width: 160px;
+    padding: 10px 16px;
+    font-size: 1rem;
+  }
+  
+  #exportButton i {
+    font-size: 1rem;
+  }
+}
+
+/* Checkboxes do modal de exportação no tema sépia */
+.checkbox-group input[type="checkbox"] {
+  border-color: var(--sepia-border);
+  background-color: #fff;
+}
+
+.checkbox-group input[type="checkbox"]:checked {
+  background-color: var(--sepia-accent-primary);
+  border-color: var(--sepia-accent-primary);
+}
+
+.checkbox-group input[type="checkbox"]:hover {
+  border-color: var(--sepia-accent-secondary);
+}
+
+.checkbox-group label {
+  color: var(--sepia-text-primary);
+}
+
+/* Melhorias para grupos de checkbox */
+.form-group.checkbox-group {
+  border-radius: 6px;
+  transition: background-color 0.2s;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.form-group.checkbox-group:hover {
+  background-color: rgba(139, 69, 19, 0.1);
+} 
