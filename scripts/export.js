@@ -303,86 +303,93 @@ export function backupNoImagesCSV(includeGas = true) {
  * Exibe o modal para seleção de opções de exportação CSV
  */
 export function showExportModal() {
-  // Criar modal se não existir
-  let modal = document.getElementById('exportModal');
+  // Obter referência ao modal já existente no HTML
+  const modal = document.getElementById('exportModal');
   if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'exportModal';
-    modal.className = 'modal-overlay';
-    document.body.appendChild(modal);
+    console.error('Modal de exportação não encontrado');
+    return;
   }
-  
-  // Construir o conteúdo do modal
-  modal.innerHTML = `
-    <div class="edit-modal">
-      <h2>Exportar Dados CSV</h2>
-      <div class="export-options">
-        <div class="form-group checkbox-group" id="exportDeliveriesGroup">
-          <input type="checkbox" id="exportDeliveries" checked>
-          <label for="exportDeliveries">Incluir entregas</label>
-        </div>
-        <div class="form-group checkbox-group" id="exportGasGroup">
-          <input type="checkbox" id="exportGas" checked>
-          <label for="exportGas">Incluir abastecimentos</label>
-        </div>
-        <div class="form-group checkbox-group" id="exportImagesGroup">
-          <input type="checkbox" id="exportImages" checked>
-          <label for="exportImages">Incluir imagens</label>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn-cancel" id="cancelExport">Cancelar</button>
-        <button type="button" class="btn-update" id="confirmExport">Exportar</button>
-      </div>
-    </div>
-  `;
   
   // Exibir o modal
   modal.style.display = 'flex';
   
-  // Adicionar event listeners para os checkboxes
+  // Obter referências aos elementos do modal
   const deliveriesCheckbox = document.getElementById('exportDeliveries');
   const gasCheckbox = document.getElementById('exportGas');
   const imagesCheckbox = document.getElementById('exportImages');
   
-  // Adicionar listeners aos grupos inteiros para melhor usabilidade
   const deliveriesGroup = document.getElementById('exportDeliveriesGroup');
   const gasGroup = document.getElementById('exportGasGroup');
   const imagesGroup = document.getElementById('exportImagesGroup');
   
-  if (deliveriesGroup && deliveriesCheckbox) {
-    deliveriesGroup.addEventListener('click', (e) => {
-      if (e.target !== deliveriesCheckbox) {
-        deliveriesCheckbox.checked = !deliveriesCheckbox.checked;
-        e.preventDefault();
-      }
-    });
-  }
+  // Limpar listeners antigos para evitar duplicação
+  const newDeliveriesGroup = deliveriesGroup.cloneNode(true);
+  const newGasGroup = gasGroup.cloneNode(true);
+  const newImagesGroup = imagesGroup.cloneNode(true);
   
-  if (gasGroup && gasCheckbox) {
-    gasGroup.addEventListener('click', (e) => {
-      if (e.target !== gasCheckbox) {
-        gasCheckbox.checked = !gasCheckbox.checked;
-        e.preventDefault();
-      }
-    });
-  }
+  deliveriesGroup.parentNode.replaceChild(newDeliveriesGroup, deliveriesGroup);
+  gasGroup.parentNode.replaceChild(newGasGroup, gasGroup);
+  imagesGroup.parentNode.replaceChild(newImagesGroup, imagesGroup);
   
-  if (imagesGroup && imagesCheckbox) {
-    imagesGroup.addEventListener('click', (e) => {
-      if (e.target !== imagesCheckbox) {
-        imagesCheckbox.checked = !imagesCheckbox.checked;
-        e.preventDefault();
-      }
-    });
-  }
+  // Obter os novos checkboxes após a clonagem
+  const newDeliveriesCheckbox = document.getElementById('exportDeliveries');
+  const newGasCheckbox = document.getElementById('exportGas');
+  const newImagesCheckbox = document.getElementById('exportImages');
   
-  // Adicionar event listeners para os botões
-  document.getElementById('cancelExport').addEventListener('click', () => {
+  // Adicionar evento de clique nos grupos completos para melhor experiência móvel
+  newDeliveriesGroup.addEventListener('click', (e) => {
+    if (e.target !== newDeliveriesCheckbox) {
+      newDeliveriesCheckbox.checked = !newDeliveriesCheckbox.checked;
+    }
+  });
+  
+  newGasGroup.addEventListener('click', (e) => {
+    if (e.target !== newGasCheckbox) {
+      newGasCheckbox.checked = !newGasCheckbox.checked;
+    }
+  });
+  
+  newImagesGroup.addEventListener('click', (e) => {
+    if (e.target !== newImagesCheckbox) {
+      newImagesCheckbox.checked = !newImagesCheckbox.checked;
+    }
+  });
+  
+  // Adicionar estilo para aumentar a área clicável
+  const styleGroups = [newDeliveriesGroup, newGasGroup, newImagesGroup];
+  styleGroups.forEach(group => {
+    group.style.cursor = 'pointer';
+    group.style.padding = '12px 8px';
+    group.style.margin = '8px 0';
+    group.style.borderRadius = '4px';
+    group.style.border = '1px solid #e0e0e0';
+    group.style.transition = 'background-color 0.2s';
+    
+    // Adicionar efeito hover com JavaScript para melhor desempenho
+    group.addEventListener('mouseover', () => {
+      group.style.backgroundColor = '#f5f5f5';
+    });
+    
+    group.addEventListener('mouseout', () => {
+      group.style.backgroundColor = '';
+    });
+  });
+  
+  // Limpar e adicionar event listeners para os botões
+  const cancelBtn = document.getElementById('cancelExport');
+  const confirmBtn = document.getElementById('confirmExport');
+  
+  const newCancelBtn = cancelBtn.cloneNode(true);
+  const newConfirmBtn = confirmBtn.cloneNode(true);
+  
+  cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+  confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+  
+  newCancelBtn.addEventListener('click', () => {
     modal.style.display = 'none';
   });
   
-  document.getElementById('confirmExport').addEventListener('click', () => {
+  newConfirmBtn.addEventListener('click', () => {
     // Obter opções selecionadas
     const includeDeliveries = document.getElementById('exportDeliveries').checked;
     const includeGas = document.getElementById('exportGas').checked;
@@ -401,12 +408,13 @@ export function showExportModal() {
     modal.style.display = 'none';
   });
   
-  // Evitar que cliques no conteúdo do modal fechem o modal
-  modal.querySelector('.edit-modal').addEventListener('click', event => {
+  // Impedir que cliques na caixa modal propaguem para fechar o modal
+  const modalContent = modal.querySelector('.edit-modal');
+  modalContent.addEventListener('click', event => {
     event.stopPropagation();
   });
   
-  // Fechar o modal ao clicar fora
+  // Fechar o modal ao clicar fora dele
   modal.addEventListener('click', () => {
     modal.style.display = 'none';
   });

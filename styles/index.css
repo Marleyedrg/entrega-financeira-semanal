@@ -230,4 +230,77 @@
     .table-container td:last-child {
         padding: 8px 4px;
     }
+}
+
+/* Estilos para o agrupamento por data na tabela de entregas */
+.date-header {
+  background-color: #f5f5f5;
+  font-weight: 500;
+}
+
+.date-header-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  flex-wrap: wrap;
+}
+
+.date-label {
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.weekday-label {
+  color: #555;
+  font-size: 0.9em;
+}
+
+.delivery-count {
+  background-color: #e0f2e9;
+  color: #16a34a;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8em;
+  margin-left: auto;
+}
+
+/* Status styles */
+.status-pending {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background-color: #fff7ed;
+  color: #ea580c;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-completed {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background-color: #dcfce7;
+  color: #16a34a;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .date-header-content {
+    padding: 8px 4px;
+  }
+  
+  .date-label {
+    font-size: 0.9em;
+  }
+  
+  .weekday-label {
+    font-size: 0.8em;
+  }
+  
+  .delivery-count {
+    font-size: 0.7em;
+    padding: 1px 6px;
+  }
 } 

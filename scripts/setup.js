@@ -27,6 +27,7 @@ import { handleOrderFormSubmit, setupOrderForm, setupGasForm } from './formHandl
 import { initializeMobileOptimizations } from './mobile.js';
 import { initializeSync, getSyncStatus } from './sync.js';
 import { runDiagnostic, repairData } from './dataDiagnostic.js';
+import { initializeDeleteConfirmation, confirmDeliveryDeletion, confirmGasDeletion } from './deleteConfirmation.js';
 
 // Export all necessary setup functions
 export {
@@ -148,6 +149,10 @@ function setupEditForms() {
   window.deleteGasEntry = deleteGasEntry;
   window.showImageModal = showImageModal;
   window.cancelDeliveryEdit = cancelDeliveryEdit;
+  
+  // Adicionar funções de confirmação de exclusão
+  window.confirmDeliveryDeletion = confirmDeliveryDeletion;
+  window.confirmGasDeletion = confirmGasDeletion;
 
   // Adicionar função de teste à window
   window.generateTestData = (days) => {
@@ -298,6 +303,9 @@ function initializeApp() {
   setupGasForm();
   setupEditForms();
   setupTabs();
+  
+  // Inicializa o sistema de confirmação de exclusão
+  initializeDeleteConfirmation();
   
   // Inicializa otimizações para dispositivos móveis
   initializeMobileOptimizations();

@@ -145,6 +145,14 @@
 
             <div class="table-container">
                 <table id="deliveriesTable">
+                    <thead>
+                        <tr>
+                            <th>Número do Pedido</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
                     <tbody id="deliveriesTableBody"></tbody>
                 </table>
             </div>
@@ -282,6 +290,10 @@
                     <label for="editFee">Taxa de Entrega</label>
                     <input type="number" id="editFee" step="0.01">
                 </div>
+                <div class="form-group checkbox-group" id="editStatusGroup">
+                    <input type="checkbox" id="editStatus">
+                    <label for="editStatus">Marcar como pendente mesmo com taxa</label>
+                </div>
                 <div class="form-group">
                     <label for="editDate" class="required">Data</label>
                     <input type="date" id="editDate" required>
@@ -314,7 +326,7 @@
         <div class="footer-buttons">
             <button id="exportButton" class="button outline">
                 <i class="fas fa-file-export"></i>
-                Exportar CSV
+                Exportar
             </button>
             <button id="diagnosticButton" class="button outline">
                 <i class="fas fa-stethoscope diagnostic-icon"></i>
@@ -324,6 +336,49 @@
         </div>
         <p class="footer-warning">Um backup automático será criado antes da exclusão.</p>
     </footer>
+    
+    <!-- Modal para exportação personalizada -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="edit-modal">
+            <h2>Exportar Dados CSV</h2>
+            <div class="export-options">
+                <div class="form-group checkbox-group" id="exportDeliveriesGroup">
+                    <input type="checkbox" id="exportDeliveries" checked>
+                    <label for="exportDeliveries">Incluir entregas</label>
+                </div>
+                <div class="form-group checkbox-group" id="exportGasGroup">
+                    <input type="checkbox" id="exportGas" checked>
+                    <label for="exportGas">Incluir abastecimentos</label>
+                </div>
+                <div class="form-group checkbox-group" id="exportImagesGroup">
+                    <input type="checkbox" id="exportImages" checked>
+                    <label for="exportImages">Incluir imagens</label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="cancelExport">Cancelar</button>
+                <button type="button" class="btn-update" id="confirmExport">Exportar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para confirmação de exclusão -->
+    <div class="modal-overlay" id="deleteConfirmModal">
+        <div class="edit-modal">
+            <h2>Confirmar Exclusão</h2>
+            <div class="delete-confirm-content">
+                <p id="deleteConfirmMessage">Para confirmar a exclusão, digite o número do pedido abaixo:</p>
+                <div class="form-group">
+                    <input type="text" id="deleteConfirmInput" placeholder="Digite para confirmar">
+                    <div class="error-message" id="deleteConfirmError"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="cancelDelete">Cancelar</button>
+                <button type="button" class="btn-update danger" id="confirmDelete">Excluir</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Scripts -->
     <script type="module" src="/scripts/main.js"></script>

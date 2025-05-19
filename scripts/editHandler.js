@@ -45,6 +45,15 @@ export function startEditing(orderId) {
   document.getElementById('editFee').value = order.fee || '';
   document.getElementById('editDate').value = order.date;
   
+  // Marcar checkbox de status com base no status atual
+  const statusCheckbox = document.getElementById('editStatus');
+  if (statusCheckbox) {
+    // Se tem valor na taxa mas status é pendente, marcar o checkbox
+    const hasFee = parseFloat(order.fee) > 0;
+    const isPending = order.status === 'pending';
+    statusCheckbox.checked = hasFee && isPending;
+  }
+  
   // Clear previous errors
   document.getElementById('editOrderNumberError').textContent = '';
   document.getElementById('editDateError').textContent = '';
@@ -172,16 +181,24 @@ export async function handleEditSubmit(event) {
   const imagePreview = document.getElementById('editImagePreview');
   const image = imagePreview.querySelector('img')?.src;
   
+  // Obter o valor do checkbox de status
+  const forcePending = document.getElementById('editStatus')?.checked || false;
+  
   try {
     // Process image
     const processedImage = image ? image.replace(/^data:image\/\w+;base64,/, '') : null;
+    
+    // Determine status based on fee and checkbox
+    const feeValue = parseFloat(fee) || 0;
+    const status = forcePending ? 'pending' : (feeValue > 0 ? 'completed' : 'pending');
     
     // Update order
     const updatedOrder = await updateOrder(state.currentEditId, {
       orderNumber,
       fee,
       date,
-      image: processedImage
+      image: processedImage,
+      status // Include the status in the update data
     });
     
     showToast('Pedido atualizado com sucesso!', 'success');

@@ -218,19 +218,50 @@ export function formatImageDisplay(imageSrc) {
  * @param {string} src - Base64 image data
  */
 export function showImageModal(src) {
-  if (!src) return;
+  if (!src) {
+    console.log('Imagem não disponível para visualização');
+    showToast('Imagem não disponível para este pedido', 'warning');
+    return;
+  }
   
-  const modal = document.getElementById('imageModal');
-  const modalImg = document.getElementById('modalImage');
-  
-  // Add data URL prefix if not present
-  const imageUrl = src.startsWith('data:image') ? src : `data:image/jpeg;base64,${src}`;
-  
-  modalImg.src = imageUrl;
-  modal.style.display = 'block';
-  
-  // Add show class after a small delay to trigger transition
-  setTimeout(() => {
-    modal.classList.add('show');
-  }, 10);
+  try {
+    const modal = document.getElementById('imageModal');
+    if (!modal) {
+      console.error('Modal de imagem não encontrado');
+      return;
+    }
+    
+    const modalImg = document.getElementById('modalImage');
+    if (!modalImg) {
+      console.error('Elemento de imagem modal não encontrado');
+      return;
+    }
+    
+    // Add data URL prefix if not present
+    const imageUrl = src.startsWith('data:image') ? src : `data:image/jpeg;base64,${src}`;
+    
+    modalImg.src = imageUrl;
+    modal.style.display = 'block';
+    
+    // Reset zoom and position
+    if (window.currentZoom) {
+      window.currentZoom = 1;
+      modalImg.style.transform = 'scale(1)';
+      
+      const zoomLevel = modal.querySelector('.zoom-level');
+      if (zoomLevel) {
+        zoomLevel.textContent = '100%';
+      }
+    }
+    
+    // Add show class after a small delay to trigger transition
+    setTimeout(() => {
+      modal.classList.add('show');
+    }, 10);
+    
+    console.log('Imagem aberta no modal com sucesso');
+  } catch (error) {
+    console.error('Erro ao abrir imagem no modal:', error);
+    showToast('Erro ao abrir a imagem', 'error');
+  }
 } 

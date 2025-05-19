@@ -64,13 +64,17 @@ export function updateOrder(id, updateData) {
     // Prepara dados para atualização
     const currentOrder = deliveries[orderIndex];
     const fee = parseFloat(updateData.fee) || 0;
+    
+    // Verifica se um status foi explicitamente fornecido
+    const status = updateData.status || (fee > 0 ? 'completed' : 'pending');
+    
     const updatedOrder = {
       ...currentOrder,
       ...updateData,
       fee: fee,
       date: normalizeDate(updateData.date || currentOrder.date),
       id: currentOrder.id, // Mantém o ID original
-      status: fee > 0 ? 'completed' : 'pending'
+      status: status // Usa o status fornecido ou calcula baseado na taxa
     };
 
     // Valida os dados atualizados

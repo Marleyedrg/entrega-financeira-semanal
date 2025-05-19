@@ -323,4 +323,111 @@
   .table-actions button {
     min-height: 40px;
   }
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  /* General mobile optimizations */
+  body {
+    font-size: 16px;
+  }
+  
+  input, select, button {
+    font-size: 16px;
+    min-height: 44px;
+  }
+  
+  /* Increased touch targets */
+  .action-button {
+    width: 44px;
+    height: 44px;
+    margin: 2px;
+  }
+  
+  /* Export modal optimizations */
+  #exportModal .edit-modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    max-height: 80vh;
+    border-radius: 16px 16px 0 0;
+    animation: slide-up 0.3s ease-out;
+  }
+  
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  
+  #exportModal .export-options {
+    padding: 16px 0;
+  }
+  
+  #exportModal .checkbox-group {
+    margin: 12px 0;
+    padding: 16px;
+  }
+  
+  #exportModal .checkbox-group label {
+    font-size: 18px;
+  }
+  
+  #exportModal .checkbox-group input[type="checkbox"] {
+    width: 28px;
+    height: 28px;
+  }
+  
+  #exportModal .modal-actions {
+    padding: 16px 0;
+    gap: 16px;
+  }
+  
+  #exportModal .modal-actions button {
+    flex: 1;
+    min-height: 50px;
+    font-size: 18px;
+  }
+}
+
+/* Small phone optimizations */
+@media (max-width: 375px) {
+  #exportModal .checkbox-group {
+    padding: 12px;
+  }
+  
+  #exportModal .checkbox-group label {
+    font-size: 16px;
+  }
+  
+  #exportModal .modal-actions button {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}
+
+/* High-DPI screens */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  #exportModal .checkbox-group {
+    border-width: 0.5px;
+  }
+}
+
+/* Fix for iOS input styling */
+@supports (-webkit-touch-callout: none) {
+  input[type="checkbox"] {
+    border-radius: 4px;
+  }
+  
+  #exportModal .edit-modal {
+    padding-bottom: env(safe-area-inset-bottom, 20px);
+  }
 } 

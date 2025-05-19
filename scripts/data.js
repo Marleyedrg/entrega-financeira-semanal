@@ -226,26 +226,128 @@ export function updateDeliveriesTable() {
 
   tbody.innerHTML = '';
   
+  // Agrupar entregas por data
+  const entriesByDate = {};
+  
   deliveries.forEach(delivery => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${delivery.orderNumber}</td>
-      <td>R$ ${parseFloat(delivery.fee).toFixed(2)}</td>
-      <td>${formatDate(delivery.date)}</td>
-      <td>
-        <button class="action-button" onclick="showImageModal('${delivery.image}')" title="Ver imagem">
-          <i class="fas fa-image"></i>
-        </button>
-        <button class="action-button" onclick="editDelivery('${delivery.id}')" title="Editar">
-          <i class="fas fa-edit"></i>
-        </button>
-        <button class="action-button delete" onclick="deleteDelivery('${delivery.id}')" title="Excluir">
-          <i class="fas fa-trash"></i>
-        </button>
+    const date = delivery.date || getCurrentDate(); // Fallback para datas inválidas
+    if (!entriesByDate[date]) {
+      entriesByDate[date] = [];
+    }
+    entriesByDate[date].push(delivery);
+  });
+  
+  // Ordenar datas (mais recentes primeiro)
+  const sortedDates = Object.keys(entriesByDate).sort((a, b) => {
+    return new Date(b) - new Date(a);
+  });
+  
+  // Renderizar entregas agrupadas por data
+  sortedDates.forEach(date => {
+    // Criar cabeçalho da data com o dia da semana
+    const dateHeader = document.createElement('tr');
+    dateHeader.className = 'date-header';
+    dateHeader.innerHTML = `
+      <td colspan="4">
+        <div class="date-header-content">
+          <span class="date-label">${formatDate(date)}</span>
+          <span class="weekday-label">(${getWeekdayName(date)})</span>
+          <span class="delivery-count">${entriesByDate[date].length} entregas</span>
+        </div>
       </td>
     `;
-    tbody.appendChild(tr);
+    tbody.appendChild(dateHeader);
+    
+    // Renderizar entregas desta data
+    entriesByDate[date].forEach(delivery => {
+      const tr = document.createElement('tr');
+      tr.className = 'delivery-row';
+      
+      // Determinar status para exibição
+      let statusText = 'Desconhecido';
+      let statusClass = '';
+      
+      if (delivery.status === 'pending') {
+        statusText = 'Pendente';
+        statusClass = 'status-pending';
+      } else if (delivery.status === 'completed') {
+        statusText = 'Concluído';
+        statusClass = 'status-completed';
+      } else if (parseFloat(delivery.fee) > 0) {
+        statusText = 'Concluído';
+        statusClass = 'status-completed';
+      } else {
+        statusText = 'Pendente';
+        statusClass = 'status-pending';
+      }
+
+      // Criando os elementos de forma segura
+      // Sanitize data before inserting
+      const safeOrderNumber = document.createTextNode(delivery.orderNumber || '').textContent;
+      const fee = parseFloat(delivery.fee) || 0;
+      
+      tr.innerHTML = `
+        <td>${safeOrderNumber}</td>
+        <td>R$ ${formatCurrency(fee)}</td>
+        <td><span class="${statusClass}">${statusText}</span></td>
+        <td class="actions-cell">
+          <button class="action-button" title="Ver imagem">
+            <i class="fas fa-image"></i>
+          </button>
+          <button class="action-button" title="Editar">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="action-button delete" title="Excluir">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      `;
+      
+      // Adicionar event listeners de forma segura
+      const imageButton = tr.querySelector('.action-button:nth-child(1)');
+      const editButton = tr.querySelector('.action-button:nth-child(2)');
+      const deleteButton = tr.querySelector('.action-button:nth-child(3)');
+      
+      imageButton.addEventListener('click', () => {
+        // Verificar se a entrega possui imagem antes de abrir o modal
+        if (delivery.image) {
+          window.showImageModal(delivery.image);
+        } else {
+          showToast('Sem comprovante para este pedido', 'info');
+        }
+      });
+      
+      editButton.addEventListener('click', () => {
+        window.editDelivery(delivery.id);
+      });
+      
+      deleteButton.addEventListener('click', () => {
+        const orderNumber = delivery.orderNumber || "desconhecido";
+        // Usar o sistema de confirmação personalizado
+        if (window.confirmDeliveryDeletion) {
+          window.confirmDeliveryDeletion(delivery.id, orderNumber);
+        } else {
+          // Fallback para confirmação nativa
+          if (confirm(`Tem certeza que deseja excluir o pedido número ${orderNumber}?`)) {
+            window.deleteDelivery(delivery.id);
+          }
+        }
+      });
+      
+      tbody.appendChild(tr);
+    });
   });
+  
+  // Mostrar mensagem se não houver entregas
+  if (sortedDates.length === 0) {
+    const emptyRow = document.createElement('tr');
+    emptyRow.innerHTML = `
+      <td colspan="4" class="empty-state">
+        Nenhuma entrega registrada
+      </td>
+    `;
+    tbody.appendChild(emptyRow);
+  }
 }
 
 // Função para atualizar a tabela de gasolina
@@ -257,15 +359,38 @@ export function updateGasTable() {
   
   gasEntries.forEach(entry => {
     const tr = document.createElement('tr');
+    
+    // Sanitize data and handle invalid values
+    const formattedDate = formatDate(entry.date) || 'Data inválida';
+    const amount = parseFloat(entry.amount) || 0;
+    const safeId = document.createTextNode(entry.id || '').textContent;
+    
     tr.innerHTML = `
-      <td>${formatDate(entry.date)}</td>
-      <td>R$ ${parseFloat(entry.amount).toFixed(2)}</td>
+      <td>${formattedDate}</td>
+      <td>R$ ${formatCurrency(amount)}</td>
       <td>
-        <button class="action-button delete" onclick="deleteGasEntry('${entry.id}')" title="Excluir">
+        <button class="action-button delete" title="Excluir">
           <i class="fas fa-trash"></i>
         </button>
       </td>
     `;
+    
+    // Add event listener safely
+    const deleteButton = tr.querySelector('.action-button.delete');
+    if (deleteButton) {
+      deleteButton.addEventListener('click', () => {
+        const amountFormatted = formatCurrency(amount);
+        // Usar o sistema de confirmação personalizado
+        if (window.confirmGasDeletion) {
+          window.confirmGasDeletion(safeId, amountFormatted);
+        } else {
+          // Fallback para confirmação nativa
+          if (confirm(`Tem certeza que deseja excluir o abastecimento no valor de R$ ${amountFormatted}?`)) {
+            window.deleteGasEntry(safeId);
+          }
+        }
+      });
+    }
     tbody.appendChild(tr);
   });
 }

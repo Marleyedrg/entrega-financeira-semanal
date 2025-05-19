@@ -390,7 +390,20 @@ body.modal-open {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 0;
+  padding: 12px 8px;
+  background-color: #f9f9f9;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+  margin: 8px 0;
+  border: 1px solid #e0e0e0;
+}
+
+.checkbox-group:hover {
+  background-color: #f0f0f0;
+}
+
+.checkbox-group:active {
+  background-color: #e8e8e8;
 }
 
 .checkbox-group input[type="checkbox"] {
@@ -437,35 +450,85 @@ body.modal-open {
 /* Ajustes para dispositivos móveis */
 @media (max-width: 768px) {
   .checkbox-group {
-    padding: 12px 0;
+    padding: 16px 12px;
+    margin: 10px 0;
   }
   
   .checkbox-group input[type="checkbox"] {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
+    border-width: 2px;
   }
   
   .checkbox-group input[type="checkbox"]:checked::after {
-    width: 6px;
-    height: 11px;
+    width: 8px;
+    height: 14px;
+    border-width: 0 3px 3px 0;
   }
   
   .checkbox-group label {
-    font-size: 16px;
+    font-size: 18px;
+    padding: 8px 0;
   }
   
   /* Criando uma área clicável maior */
   .form-group.checkbox-group {
     position: relative;
+    cursor: pointer;
   }
   
-  .form-group.checkbox-group::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1;
+  /* Melhorias para o modal de exportação em dispositivos móveis */
+  #exportModal .export-options {
+    padding: 10px 0;
+  }
+  
+  #exportModal .modal-actions {
+    padding-top: 20px;
+    margin-top: 20px;
+  }
+  
+  #exportModal .modal-actions button {
+    padding: 12px 20px;
+    font-size: 16px;
+    min-height: 48px;
+  }
+}
+
+/* Estilos para o modal de confirmação de exclusão */
+.delete-confirm-content {
+  margin-bottom: 1.5rem;
+}
+
+.delete-confirm-content p {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+#deleteConfirmInput {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+  margin-top: 0.5rem;
+}
+
+#deleteConfirmInput.error {
+  border-color: #dc2626;
+}
+
+.btn-update.danger {
+  background-color: #dc2626;
+}
+
+.btn-update.danger:hover {
+  background-color: #b91c1c;
+}
+
+@media (max-width: 768px) {
+  #deleteConfirmInput {
+    font-size: 16px;
+    padding: 12px;
   }
 } 

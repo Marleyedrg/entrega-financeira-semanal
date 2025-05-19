@@ -4,7 +4,8 @@ const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.1;
 
 // Variáveis globais
-let currentZoom = 1;
+window.currentZoom = 1;  // Exposto globalmente para poder ser acessado de outros módulos
+let currentZoom = window.currentZoom;
 let initialPinchDistance = 0;
 let lastPinchDistance = 0;
 let isDragging = false;
@@ -25,6 +26,7 @@ const zoomOut = document.getElementById('zoomOut');
 function updateZoom(zoom) {
     // Limita o zoom entre MIN_ZOOM e MAX_ZOOM
     currentZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
+    window.currentZoom = currentZoom;  // Atualiza a variável global
     
     // Atualiza a transformação da imagem
     modalImage.style.transform = `scale(${currentZoom})`;
@@ -106,16 +108,53 @@ zoomOut.addEventListener('click', () => {
 });
 
 // Reset do zoom quando o modal é fechado
-modal.querySelector('.close').addEventListener('click', () => {
+function resetZoomAndClose() {
     currentZoom = 1;
     translateX = 0;
     translateY = 0;
     modalImage.style.transform = 'scale(1)';
     zoomLevel.textContent = '100%';
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+}
+
+// Adicionar o listener ao botão de fechar
+const closeButton = modal.querySelector('.close');
+if (closeButton) {
+    closeButton.addEventListener('click', resetZoomAndClose);
+}
+
+// Fechar o modal ao clicar fora da imagem
+modal.addEventListener('click', function(event) {
+    if (event.target === modal) {
+        resetZoomAndClose();
+    }
+});
+
+// Fechar o modal com a tecla ESC
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape' && modal.style.display === 'block') {
+        resetZoomAndClose();
+    }
 });
 
 // Exporta as funções necessárias
 export function initializeImageZoom() {
-    // Inicializa o zoom
-    updateZoom(1);
+    try {
+        // Verificar se os elementos existem
+        if (!modal || !modalImage || !zoomLevel || !zoomIn || !zoomOut) {
+            console.error('Elementos do modal de imagem não encontrados');
+            return;
+        }
+        
+        // Inicializa o zoom
+        updateZoom(1);
+        
+        // Expor a função de reset para o uso global
+        window.resetImageZoom = resetZoomAndClose;
+        
+        console.log('Zoom de imagem inicializado com sucesso');
+    } catch (error) {
+        console.error('Erro ao inicializar o zoom de imagem:', error);
+    }
 } 

@@ -536,4 +536,35 @@ tr:hover {
 
 .form-group.checkbox-group:hover {
   background-color: rgba(139, 69, 19, 0.1);
+}
+
+/* Estilos para agrupamento de entregas no tema sépia */
+.date-header {
+  background-color: var(--sepia-bg-tertiary);
+}
+
+.date-header td {
+  border-top: 1px solid var(--sepia-border);
+  border-bottom: 1px solid var(--sepia-border);
+}
+
+.date-label {
+  color: var(--sepia-text-primary);
+}
+
+.weekday-label {
+  color: var(--sepia-text-secondary);
+}
+
+.delivery-count {
+  background-color: rgba(139, 69, 19, 0.2);
+  color: var(--sepia-text-secondary);
+}
+
+.delivery-row td {
+  border-bottom: 1px solid var(--sepia-border);
+}
+
+.delivery-row:hover {
+  background-color: rgba(139, 69, 19, 0.05);
 } 
