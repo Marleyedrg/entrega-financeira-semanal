@@ -563,6 +563,9 @@ tr:hover {
 
 .delivery-row td {
   border-bottom: 1px solid var(--sepia-border);
+  padding-left: 15px;
+  padding-right: 15px;
+  text-align: center;
 }
 
 .delivery-row:hover {

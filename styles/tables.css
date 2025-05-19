@@ -98,7 +98,7 @@ tr[data-id]:hover {
   cursor: pointer;
   color: var(--text-muted);
   transition: all var(--transition-normal);
-  border-radius: var(--radius-full);
+  border-radius: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -226,6 +226,17 @@ tr[data-id]:hover {
 
 .table-image:hover {
   transform: scale(1.1);
+}
+
+/* Delivery Row Styles */
+.delivery-row td {
+  padding-left: 15px;
+  padding-right: 15px;
+  text-align: center;
+}
+
+.delivery-row:hover {
+  background-color: var(--background-hover);
 }
 
 /* Table Text Styles */

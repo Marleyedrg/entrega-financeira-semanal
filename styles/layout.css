@@ -31,7 +31,7 @@ header {
 .tab-button {
   background-color: #f8fafc;
   border: none;
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  border-radius: 0;
   font-weight: 600;
   cursor: pointer;
   transition: background-color var(--transition-normal), transform var(--transition-fast);

@@ -2,7 +2,7 @@
 .button {
   padding: var(--spacing-3) var(--spacing-6);
   font-size: var(--font-size-sm);
-  border-radius: var(--radius-full);
+  border-radius: 0;
   font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-normal);
@@ -32,13 +32,13 @@
 }
 
 .primary {
-  background: var(--gradient-primary);
+  background: #FFD700; /* Yellow color */
   color: white;
-  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
 }
 
 .primary:hover {
-  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4);
   transform: translateY(-1px);
 }
 
@@ -513,6 +513,7 @@ tr[data-id]:hover {
   cursor: pointer;
   color: var(--text-muted);
   transition: color 0.2s ease;
+  border-radius: 0;
 }
 
 .action-button:hover {
@@ -673,7 +674,7 @@ tr[data-id]:hover {
   background: #ef4444;
   color: white;
   border: none;
-  border-radius: 50%;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1020,4 +1021,16 @@ header {
     margin-top: 1rem;
     padding: 8px;
   }
+}
+
+#finishWeekButton {
+  background: #FFD700; /* Yellow color */
+  color: white;
+  box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
+  border-radius: 0;
+}
+
+#finishWeekButton:hover {
+  box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4);
+  transform: translateY(-1px);
 } 
