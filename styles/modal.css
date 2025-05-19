@@ -261,6 +261,7 @@ body.modal-open {
   justify-content: center;
   transform-origin: center center;
   transition: transform 0.1s ease-out;
+  will-change: transform; /* Optimization for animations */
 }
 
 #modalImage {
@@ -271,6 +272,8 @@ body.modal-open {
   -webkit-user-drag: none;
   transform-origin: center center;
   transition: transform 0.1s ease-out;
+  will-change: transform; /* Optimization for animations */
+  -webkit-touch-callout: none; /* Prevent iOS touch callout */
 }
 
 .zoom-controls {
@@ -284,6 +287,13 @@ body.modal-open {
   padding: 8px 16px;
   border-radius: 20px;
   z-index: 1001;
+  opacity: 0.8;
+  transition: opacity 0.3s;
+}
+
+.zoom-controls:hover,
+.zoom-controls:active {
+  opacity: 1;
 }
 
 .zoom-controls button {
@@ -295,10 +305,13 @@ body.modal-open {
   padding: 5px 10px;
   border-radius: 5px;
   transition: background-color 0.2s;
+  min-width: 40px;
+  min-height: 40px; /* Larger touch target for mobile */
 }
 
-.zoom-controls button:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+.zoom-controls button:hover,
+.zoom-controls button:active {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .zoom-controls .zoom-level {
@@ -306,23 +319,53 @@ body.modal-open {
   font-size: 14px;
   display: flex;
   align-items: center;
-  min-width: 40px;
+  min-width: 60px;
   justify-content: center;
 }
 
+/* Enhanced mobile styles */
 @media (max-width: 768px) {
   .zoom-controls {
-    bottom: 10px;
-    padding: 6px 12px;
+    bottom: 30px;
+    padding: 10px 16px;
   }
   
   .zoom-controls button {
-    font-size: 18px;
-    padding: 4px 8px;
+    font-size: 24px;
+    padding: 8px 16px;
+    min-width: 50px;
+    min-height: 50px;
   }
   
   .zoom-controls .zoom-level {
-    font-size: 12px;
+    font-size: 16px;
+    min-width: 70px;
+  }
+  
+  /* Add visual feedback for touch states */
+  .modal.dragging #modalImage {
+    transition: none; /* Remove transition during active dragging for better responsiveness */
+  }
+  
+  /* Add instructions for first-time users */
+  .modal::before {
+    content: "Pinçe para zoom • Toque duplo para ampliar";
+    position: absolute;
+    bottom: 80px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 14px;
+    opacity: 0.8;
+    pointer-events: none;
+    animation: fadeOut 5s forwards;
+  }
+  
+  @keyframes fadeOut {
+    0% { opacity: 0.8; }
+    70% { opacity: 0.8; }
+    100% { opacity: 0; }
   }
 }
 
