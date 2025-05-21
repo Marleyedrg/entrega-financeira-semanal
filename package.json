@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:github": "vite build && touch dist/.nojekyll",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "terser": "^5.28.1",
     "vite": "^5.0.12"
   }
 }

@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  base: '/entrega-financeira-semanal/',
   server: {
     port: 3000,
     host: true,
@@ -24,10 +25,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: undefined // Evita chunking desnecessário em desenvolvimento
-      }
-    },
-    sourcemap: true,
-    rollupOptions: {
+      },
       onwarn(warning, warn) {
         // Ignore source map warnings from browser extensions
         if (warning.code === 'SOURCE_MAP_ERROR' && warning.message.includes('moz-extension://')) {
@@ -35,7 +33,8 @@ export default defineConfig({
         }
         warn(warning);
       }
-    }
+    },
+    sourcemap: true
   },
   optimizeDeps: {
     include: [] // Adicione dependências que precisam ser pré-bundled

@@ -132,22 +132,7 @@ export function clearAllData() {
   }
   
   try {
-    // Fazer backup antes de limpar
-    const csvContent = generateCSV(true);
-    const date = new Date();
-    const { fileName } = generateDeliveryIdentifiers(date);
-    const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const csvUrl = URL.createObjectURL(csvBlob);
-    
-    const link = document.createElement('a');
-    link.href = csvUrl;
-    link.download = `backup-antes-de-limpar-${fileName}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(csvUrl);
-    
-    // Limpar dados
+    // Limpar dados diretamente, sem criar backup
     localStorage.clear();
     deliveries.length = 0;
     gasEntries.length = 0;
