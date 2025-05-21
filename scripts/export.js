@@ -177,36 +177,85 @@ export function finishWeek() {
     
     const date = new Date();
     const { fileName } = generateDeliveryIdentifiers(date);
+    const downloadFilename = `relatorio-${fileName}.csv`;
     
     // Gerar CSV
     const csvContent = generateCSV(true);
     const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const csvUrl = URL.createObjectURL(csvBlob);
     
-    // Download do CSV
-    const link = document.createElement('a');
-    link.href = csvUrl;
-    link.download = `relatorio-${fileName}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(csvUrl);
+    // Verificar se estamos em um dispositivo móvel
+    const isMobileDevice = window.innerWidth <= 768 || 
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // Função para limpar dados após o download
+    const clearDataAfterExport = () => {
+      // Limpar os dados
+      localStorage.clear();
+      deliveries.length = 0;
+      gasEntries.length = 0;
+      
+      // Recarregar dados
+      loadDeliveries();
+      loadGasEntries();
+      updateTotals();
+      
+      showToast('Semana finalizada com sucesso!', 'success');
+    };
+    
+    if (isMobileDevice) {
+      try {
+        // Para iOS Safari e alguns outros navegadores móveis
+        if (navigator.share && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+          // Criar um objeto de arquivo para compartilhar
+          const file = new File([csvBlob], downloadFilename, { type: 'text/csv' });
+          
+          navigator.share({
+            files: [file],
+            title: 'Exportação de dados semanal',
+            text: 'Relatório semanal do Sistema de Entregas'
+          }).then(() => {
+            clearDataAfterExport();
+          }).catch(err => {
+            console.error('Erro ao compartilhar arquivo:', err);
+            // Fallback para método tradicional
+            triggerDirectDownload(true);
+          });
+        } else {
+          // Fallback para download direto
+          triggerDirectDownload(true);
+        }
+      } catch (error) {
+        console.error('Erro específico para mobile:', error);
+        // Fallback para método tradicional
+        triggerDirectDownload(true);
+      }
+    } else {
+      // Método tradicional para desktop
+      triggerDirectDownload(true);
+    }
+    
+    // Função de fallback para download direto
+    function triggerDirectDownload(shouldClearData) {
+      const csvUrl = URL.createObjectURL(csvBlob);
+      const link = document.createElement('a');
+      link.href = csvUrl;
+      link.download = downloadFilename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(csvUrl);
+        
+        if (shouldClearData) {
+          clearDataAfterExport();
+        }
+      }, 300);
+    }
     
     // Otimizar imagens armazenadas
     optimizeStoredImages();
-    
-    // Limpar os dados
-    localStorage.clear();
-    deliveries.length = 0;
-    gasEntries.length = 0;
-    
-    // Recarregar dados
-    loadDeliveries();
-    loadGasEntries();
-    updateTotals();
-    
-    const totalEntries = deliveries.length + gasEntries.length;
-    showToast(`Semana finalizada com sucesso! ${totalEntries} registros exportados.`, 'success');
   } catch (error) {
     console.error('Erro ao finalizar semana:', error);
     showToast(error.message, 'error');
@@ -511,16 +560,62 @@ export function exportCustomCSV(includeDeliveries = true, includeGas = true, inc
     if (!includeGas) suffix += '-no-gas';
     if (!includeImages) suffix += '-no-images';
     
-    // Download do CSV
+    // Nome do arquivo
+    const downloadFilename = `exportacao${suffix}-${fileName}.csv`;
+    
+    // Verificar se estamos em um dispositivo móvel
+    const isMobileDevice = window.innerWidth <= 768 || 
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // Download do CSV - usar método diferente para mobile
     const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const csvUrl = URL.createObjectURL(csvBlob);
-    const link = document.createElement('a');
-    link.href = csvUrl;
-    link.download = `exportacao${suffix}-${fileName}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(csvUrl);
+    
+    if (isMobileDevice) {
+      try {
+        // Para iOS Safari e alguns outros navegadores móveis
+        if (navigator.share && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+          // Criar um objeto de arquivo para compartilhar
+          const file = new File([csvBlob], downloadFilename, { type: 'text/csv' });
+          
+          navigator.share({
+            files: [file],
+            title: 'Exportação de dados',
+            text: 'Dados exportados do Sistema de Entregas'
+          }).then(() => {
+            showToast('Exportação concluída com sucesso!', 'success');
+          }).catch(err => {
+            console.error('Erro ao compartilhar arquivo:', err);
+            // Fallback para método tradicional
+            triggerDirectDownload();
+          });
+        } else {
+          // Fallback para download direto
+          triggerDirectDownload();
+        }
+      } catch (error) {
+        console.error('Erro específico para mobile:', error);
+        // Fallback para método tradicional
+        triggerDirectDownload();
+      }
+    } else {
+      // Método tradicional para desktop
+      triggerDirectDownload();
+    }
+    
+    // Função de fallback para download direto
+    function triggerDirectDownload() {
+      const csvUrl = URL.createObjectURL(csvBlob);
+      const link = document.createElement('a');
+      link.href = csvUrl;
+      link.download = downloadFilename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(csvUrl);
+      }, 100);
+    }
     
     // Otimizar imagens armazenadas se incluir imagens
     if (includeImages) {

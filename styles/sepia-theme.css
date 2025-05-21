@@ -570,4 +570,10 @@ tr:hover {
 
 .delivery-row:hover {
   background-color: rgba(139, 69, 19, 0.05);
+}
+
+.total-fees {
+  background-color: rgba(96, 161, 100, 0.3);
+  color: var(--sepia-accent-primary);
+  font-weight: 600;
 } 

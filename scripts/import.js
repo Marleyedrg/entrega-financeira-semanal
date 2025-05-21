@@ -1,5 +1,6 @@
 import { deliveries, gasEntries, loadDeliveries, loadGasEntries, updateTotals } from './data.js';
 import { parseCSVDate, showToast, normalizeDate } from './utils.js';
+import { isMobileDevice } from './mobile.js';
 
 // Função para validar os dados importados
 function validateImportedData(entry, type) {
@@ -37,12 +38,31 @@ function validateImportedData(entry, type) {
 
 // Função para importar dados do CSV
 export function importCSV(event) {
-  const file = event.target.files[0];
-  if (!file) return;
+  // Reset the input to ensure change event fires even with same file
+  const resetInput = () => {
+    if (event && event.target) {
+      event.target.value = '';
+    }
+  };
+
+  // Handle the case where we got a direct file object (from mobile)
+  const file = event.target ? event.target.files[0] : (event.file || null);
+  if (!file) {
+    resetInput();
+    return;
+  }
+
+  // Show loading indicator
+  const loadingToast = showToast('Processando arquivo...', 'info', 0);
 
   const reader = new FileReader();
   reader.onload = function(e) {
     try {
+      // Remove loading toast
+      if (loadingToast) {
+        document.body.removeChild(loadingToast);
+      }
+
       const text = e.target.result;
       const lines = text.split('\n').filter(l => l.trim());
       
@@ -144,6 +164,15 @@ export function importCSV(event) {
       console.error('Erro na importação:', error);
       showToast(error.message, 'error');
     }
+    // Always reset the input
+    resetInput();
   };
+  
+  reader.onerror = function() {
+    showToast('Erro ao ler o arquivo', 'error');
+    resetInput();
+  };
+  
+  // Start reading the file
   reader.readAsText(file);
 } 

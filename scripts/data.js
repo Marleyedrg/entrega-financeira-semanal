@@ -232,9 +232,16 @@ export function updateDeliveriesTable() {
   deliveries.forEach(delivery => {
     const date = delivery.date || getCurrentDate(); // Fallback para datas inválidas
     if (!entriesByDate[date]) {
-      entriesByDate[date] = [];
+      entriesByDate[date] = {
+        entries: [],
+        totalFees: 0
+      };
     }
-    entriesByDate[date].push(delivery);
+    entriesByDate[date].entries.push(delivery);
+    
+    // Calcular o total de taxas para esta data
+    const fee = parseFloat(delivery.fee) || 0;
+    entriesByDate[date].totalFees += fee;
   });
   
   // Ordenar datas (mais recentes primeiro)
@@ -244,7 +251,10 @@ export function updateDeliveriesTable() {
   
   // Renderizar entregas agrupadas por data
   sortedDates.forEach(date => {
-    // Criar cabeçalho da data com o dia da semana
+    const entriesForDate = entriesByDate[date].entries;
+    const totalFeesForDate = entriesByDate[date].totalFees;
+    
+    // Criar cabeçalho da data com o dia da semana e total de taxas
     const dateHeader = document.createElement('tr');
     dateHeader.className = 'date-header';
     dateHeader.innerHTML = `
@@ -252,14 +262,17 @@ export function updateDeliveriesTable() {
         <div class="date-header-content">
           <span class="date-label">${formatDate(date)}</span>
           <span class="weekday-label">(${getWeekdayName(date)})</span>
-          <span class="delivery-count">${entriesByDate[date].length} entregas</span>
+          <div class="date-summary">
+            <span class="delivery-count">${entriesForDate.length} entregas</span>
+            <span class="total-fees">R$ ${formatCurrency(totalFeesForDate)}</span>
+          </div>
         </div>
       </td>
     `;
     tbody.appendChild(dateHeader);
     
     // Renderizar entregas desta data
-    entriesByDate[date].forEach(delivery => {
+    entriesForDate.forEach(delivery => {
       const tr = document.createElement('tr');
       tr.className = 'delivery-row';
       

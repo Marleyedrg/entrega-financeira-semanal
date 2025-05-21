@@ -12,7 +12,7 @@ import {
   initializeData,
   forceSyncData
 } from './data.js';
-import { finishWeek, clearAllData, backupData } from './export.js';
+import { finishWeek, clearAllData, backupData, exportCustomCSV, showExportModal } from './export.js';
 import { importCSV } from './import.js';
 import { processImageForStorage, showImageModal } from './imageUtils.js';
 import { renderAnalytics } from './analytics.js';
@@ -112,9 +112,13 @@ function setupEditForms() {
     }
   });
   
+  // Setup for finish week button (with mobile handling via mobile.js)
   const finishWeekButton = document.getElementById('finishWeekButton');
   if (finishWeekButton) {
-    finishWeekButton.addEventListener('click', finishWeek);
+    // Setup click handler but allow override from mobile.js
+    if (!finishWeekButton.onclick) {
+      finishWeekButton.addEventListener('click', finishWeek);
+    }
     finishWeekButton.title = "Exportar dados e limpar todas as entregas";
   }
 
@@ -124,16 +128,26 @@ function setupEditForms() {
     clearDataButton.title = "Limpar todos os dados";
   }
 
+  // Setup for import button (with mobile handling via mobile.js)
   const importButton = document.getElementById('importButton');
   const csvInput = document.getElementById('csvInput');
   
   if (importButton && csvInput) {
-    importButton.addEventListener('click', () => {
-      csvInput.click();
-    });
+    // Setup click handler but allow override from mobile.js  
+    if (!importButton.onclick) {
+      importButton.addEventListener('click', () => {
+        csvInput.click();
+      });
+    }
     
-    csvInput.addEventListener('change', importCSV);
+    // Ensure the change event is properly captured
+    if (!csvInput.onchange) {
+      csvInput.addEventListener('change', importCSV);
+    }
   }
+
+  // Setup the export modal event listeners
+  setupExportModalHandlers();
 
   // Setup storage event listener to handle changes from other tabs
   window.addEventListener('storage', (event) => {
@@ -169,6 +183,39 @@ function setupEditForms() {
   // Carrega os dados iniciais
   loadDeliveries();
   renderAnalytics();
+}
+
+// Setup export modal handlers
+function setupExportModalHandlers() {
+  const exportModal = document.getElementById('exportModal');
+  const confirmExport = document.getElementById('confirmExport');
+  const cancelExport = document.getElementById('cancelExport');
+  
+  if (exportModal && confirmExport && cancelExport) {
+    // Setup confirmation button handler if it's not already set
+    if (!confirmExport.onclick) {
+      confirmExport.addEventListener('click', () => {
+        try {
+          const includeDeliveries = document.getElementById('exportDeliveries').checked;
+          const includeGas = document.getElementById('exportGas').checked;
+          const includeImages = document.getElementById('exportImages').checked;
+          
+          exportCustomCSV(includeDeliveries, includeGas, includeImages);
+          exportModal.style.display = 'none';
+        } catch (error) {
+          console.error('Erro ao exportar dados:', error);
+          showToast(error.message, 'error');
+        }
+      });
+    }
+    
+    // Setup cancellation button handler if it's not already set
+    if (!cancelExport.onclick) {
+      cancelExport.addEventListener('click', () => {
+        exportModal.style.display = 'none';
+      });
+    }
+  }
 }
 
 // Função para configurar as tabs

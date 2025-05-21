@@ -1,5 +1,7 @@
 // Mobile utilities and optimizations
 import { renderAnalytics } from './analytics.js';
+import { importCSV } from './import.js';
+import { exportCustomCSV, backupData, showExportModal } from './export.js';
 
 /**
  * Check if device is mobile
@@ -27,10 +29,94 @@ export function setupMobileOptimizations() {
     
     // Fix viewport height issues on mobile browsers
     fixMobileViewportHeight();
+    
+    // Setup mobile-specific file handling
+    setupMobileFileHandling();
   }
 
   // Apply chart optimizations
   setupChartOptimizations();
+}
+
+/**
+ * Setup mobile-specific file handling for import/export
+ */
+function setupMobileFileHandling() {
+  // Enhance import button for mobile
+  const importButton = document.getElementById('importButton');
+  const csvInput = document.getElementById('csvInput');
+  
+  if (importButton && csvInput) {
+    // Override click handler to use mobile-friendly approach
+    const originalClickHandler = importButton.onclick;
+    importButton.onclick = (e) => {
+      // For iOS and other systems that don't support file input well
+      if (isMobileDevice() && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        e.preventDefault();
+        
+        alert('Para importar no iOS, use o botão "Escolher arquivo" e selecione um arquivo CSV.');
+        
+        // Improve file input for mobile
+        csvInput.accept = ".csv,text/csv";
+        csvInput.click();
+      } else if (originalClickHandler) {
+        originalClickHandler.call(importButton, e);
+      } else {
+        csvInput.click();
+      }
+    };
+    
+    // Add special handling for the file input on mobile
+    csvInput.onchange = function(event) {
+      if (isMobileDevice()) {
+        importCSV(event);
+      }
+    };
+  }
+  
+  // Enhance export button for mobile
+  const finishWeekButton = document.getElementById('finishWeekButton');
+  
+  if (finishWeekButton) {
+    const originalClickHandler = finishWeekButton.onclick;
+    finishWeekButton.onclick = (e) => {
+      if (isMobileDevice()) {
+        e.preventDefault();
+        
+        if (confirm('Tem certeza que deseja finalizar a semana? Isso irá exportar e limpar todos os dados.')) {
+          showExportModal();
+        }
+      } else if (originalClickHandler) {
+        originalClickHandler.call(finishWeekButton, e);
+      }
+    };
+  }
+  
+  // Make sure the export modal works on mobile
+  const exportModal = document.getElementById('exportModal');
+  const confirmExport = document.getElementById('confirmExport');
+  const cancelExport = document.getElementById('cancelExport');
+  
+  if (confirmExport) {
+    confirmExport.onclick = function() {
+      try {
+        const includeDeliveries = document.getElementById('exportDeliveries').checked;
+        const includeGas = document.getElementById('exportGas').checked;
+        const includeImages = document.getElementById('exportImages').checked;
+        
+        exportCustomCSV(includeDeliveries, includeGas, includeImages);
+        exportModal.style.display = 'none';
+      } catch (error) {
+        console.error('Error exporting on mobile:', error);
+      }
+    };
+  }
+  
+  if (cancelExport) {
+    cancelExport.onclick = function() {
+      exportModal.style.display = 'none';
+    };
+  }
 }
 
 /**
@@ -185,6 +271,10 @@ export function initializeMobileOptimizations() {
   setupTouchInteractions();
   setupChartOptimizations();
   setupFastClick();
+  
+  if (isMobileDevice()) {
+    setupMobileFileHandling();
+  }
 }
 
 /**

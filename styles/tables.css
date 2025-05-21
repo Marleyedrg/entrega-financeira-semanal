@@ -263,6 +263,73 @@ tr[data-id]:hover {
   font-weight: 600;
 }
 
+/* Date Header Styles */
+.date-header-content {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.date-label {
+  font-weight: bold;
+  font-size: 16px;
+  margin-right: 6px;
+}
+
+.weekday-label {
+  color: #666;
+  font-size: 14px;
+}
+
+.date-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.delivery-count {
+  background-color: #e5e7eb;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.total-fees {
+  background-color: #d1fae5;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #065f46;
+}
+
+/* Mobile optimizations for date headers */
+@media (max-width: 480px) {
+  .date-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .date-summary {
+    margin-left: 0;
+    margin-top: 4px;
+  }
+  
+  .date-label, .weekday-label {
+    display: inline-block;
+  }
+  
+  .delivery-count, .total-fees {
+    font-size: 13px;
+    padding: 2px 8px;
+  }
+}
+
 /* Status Badges */
 .status-badge {
   display: inline-block;
