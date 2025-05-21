@@ -36,6 +36,28 @@ function validateImportedData(entry, type) {
   return errors;
 }
 
+// Função para verificar se o arquivo é um CSV válido
+function isCSVFile(file) {
+  // Verificar o tipo do arquivo
+  const validTypes = [
+    'text/csv',
+    'text/comma-separated-values',
+    'application/csv',
+    'application/excel',
+    'application/vnd.ms-excel',
+    'application/vnd.msexcel',
+    'text/anytext',
+    'text/plain'
+  ];
+  
+  // Verificar se a extensão é .csv
+  const fileName = file.name.toLowerCase();
+  const hasCSVExtension = fileName.endsWith('.csv');
+  
+  // Considerar válido se tiver extensão .csv ou um tipo MIME compatível
+  return hasCSVExtension || validTypes.includes(file.type);
+}
+
 // Função para importar dados do CSV
 export function importCSV(event) {
   // Reset the input to ensure change event fires even with same file
@@ -49,6 +71,14 @@ export function importCSV(event) {
   const file = event.target ? event.target.files[0] : (event.file || null);
   if (!file) {
     resetInput();
+    showToast('Nenhum arquivo selecionado', 'error');
+    return;
+  }
+  
+  // Verificar se o arquivo é um CSV válido
+  if (!isCSVFile(file)) {
+    resetInput();
+    showToast('Por favor, selecione um arquivo CSV válido', 'error');
     return;
   }
 
@@ -64,11 +94,27 @@ export function importCSV(event) {
       }
 
       const text = e.target.result;
+      
+      // Verificar se tem conteúdo
+      if (!text || !text.trim()) {
+        throw new Error('O arquivo está vazio');
+      }
+      
+      // Detectar separador do CSV (vírgula, ponto e vírgula, tab)
+      const firstLine = text.split('\n')[0];
+      let separator = ',';
+      
+      if (firstLine.includes(';')) {
+        separator = ';';
+      } else if (firstLine.includes('\t')) {
+        separator = '\t';
+      }
+      
       const lines = text.split('\n').filter(l => l.trim());
       
       // Validar cabeçalhos
       const expectedHeaders = ['Data', 'Tipo', 'ID', 'Número do Pedido', 'Valor Pedido', 'Valor Gasolina', 'Status', 'Imagem'];
-      const headers = lines[0].split(',').map(h => h.trim());
+      const headers = lines[0].split(separator).map(h => h.trim());
       
       const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
       if (missingHeaders.length > 0) {
@@ -91,7 +137,7 @@ export function importCSV(event) {
         for (let char of lines[i]) {
           if (char === '"') {
             insideQuotes = !insideQuotes;
-          } else if (char === ',' && !insideQuotes) {
+          } else if (char === separator && !insideQuotes) {
             values.push(currentValue);
             currentValue = '';
           } else {
@@ -121,8 +167,7 @@ export function importCSV(event) {
           } else {
             importedGasData.push(gasEntry);
           }
-          
-        } else if (entry['Tipo'] === 'Entrega') {
+        } else {
           const delivery = {
             id: entry['ID'] || String(Date.now()),
             date: normalizeDate(parseCSVDate(entry['Data'])),

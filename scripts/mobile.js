@@ -49,10 +49,11 @@ function setupMobileFileHandling() {
   
   if (importButton && csvInput) {
     // Melhorar o input de arquivo para dispositivos móveis
-    csvInput.accept = ".csv,text/csv";
+    // Expandir os tipos aceitos para garantir compatibilidade em diferentes dispositivos
+    csvInput.accept = ".csv,text/csv,text/comma-separated-values,application/csv,application/excel,application/vnd.ms-excel,application/vnd.msexcel,text/anytext,text/plain";
     
-    // Garantir que o input esteja configurado corretamente
-    csvInput.setAttribute('capture', 'filesystem');
+    // Remover o atributo capture que pode estar limitando a seleção de arquivos
+    csvInput.removeAttribute('capture');
     csvInput.setAttribute('multiple', 'false');
 
     // Criar um modal mais amigável para selecionar arquivos
@@ -71,7 +72,7 @@ function setupMobileFileHandling() {
             <div class="file-selection-container">
               <p>Selecione um arquivo CSV para importar:</p>
               <div class="file-input-wrapper">
-                <input type="file" id="mobileFileInput" accept=".csv,text/csv" class="mobile-file-input">
+                <input type="file" id="mobileFileInput" accept=".csv,text/csv,text/comma-separated-values,application/csv,application/excel,application/vnd.ms-excel,application/vnd.msexcel,text/anytext,text/plain" class="mobile-file-input">
                 <label for="mobileFileInput" class="file-select-button">
                   <i class="fas fa-file-upload"></i>
                   Selecionar arquivo
@@ -81,7 +82,7 @@ function setupMobileFileHandling() {
             </div>
             <div class="modal-actions">
               <button type="button" class="btn-cancel" id="cancelFileSelection">Cancelar</button>
-              <button type="button" class="btn-update" id="confirmFileSelection">Importar</button>
+              <button type="button" class="btn-update" id="confirmFileSelection" disabled>Importar</button>
             </div>
           </div>
         `;

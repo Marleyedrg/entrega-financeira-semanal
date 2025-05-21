@@ -303,4 +303,29 @@
     font-size: 0.7em;
     padding: 1px 6px;
   }
+}
+
+/* Adicionar estilos específicos para o csvInput */
+#csvInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+}
+
+/* Em dispositivos móveis, mostrar o input de forma acessível quando selecionado */
+@media (max-width: 768px) {
+  #csvInput:focus,
+  #csvInput:active {
+    position: static;
+    width: 100%;
+    height: auto;
+    opacity: 1;
+    margin: 10px 0;
+    padding: 10px;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+  }
 } 
