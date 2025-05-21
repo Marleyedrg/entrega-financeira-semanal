@@ -2,6 +2,7 @@
 import { renderAnalytics } from './analytics.js';
 import { importCSV } from './import.js';
 import { exportCustomCSV, backupData, showExportModal } from './export.js';
+import { showToast } from './utils.js';
 
 /**
  * Check if device is mobile
@@ -47,28 +48,123 @@ function setupMobileFileHandling() {
   const csvInput = document.getElementById('csvInput');
   
   if (importButton && csvInput) {
+    // Melhorar o input de arquivo para dispositivos móveis
+    csvInput.accept = ".csv,text/csv";
+    
+    // Garantir que o input esteja configurado corretamente
+    csvInput.setAttribute('capture', 'filesystem');
+    csvInput.setAttribute('multiple', 'false');
+
+    // Criar um modal mais amigável para selecionar arquivos
+    const createFileSelectionModal = () => {
+      // Verificar se já existe
+      let fileModal = document.getElementById('fileSelectionModal');
+      
+      if (!fileModal) {
+        // Criar o modal de seleção de arquivos
+        fileModal = document.createElement('div');
+        fileModal.id = 'fileSelectionModal';
+        fileModal.className = 'modal-overlay';
+        fileModal.innerHTML = `
+          <div class="edit-modal">
+            <h2>Selecionar Arquivo</h2>
+            <div class="file-selection-container">
+              <p>Selecione um arquivo CSV para importar:</p>
+              <div class="file-input-wrapper">
+                <input type="file" id="mobileFileInput" accept=".csv,text/csv" class="mobile-file-input">
+                <label for="mobileFileInput" class="file-select-button">
+                  <i class="fas fa-file-upload"></i>
+                  Selecionar arquivo
+                </label>
+              </div>
+              <div id="selectedFileName" class="selected-file-name"></div>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn-cancel" id="cancelFileSelection">Cancelar</button>
+              <button type="button" class="btn-update" id="confirmFileSelection">Importar</button>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(fileModal);
+        
+        // Configurar o input de arquivo móvel
+        const mobileFileInput = document.getElementById('mobileFileInput');
+        const selectedFileName = document.getElementById('selectedFileName');
+        const confirmFileSelection = document.getElementById('confirmFileSelection');
+        const cancelFileSelection = document.getElementById('cancelFileSelection');
+        
+        // Mostrar o nome do arquivo quando selecionado
+        mobileFileInput.addEventListener('change', (e) => {
+          if (e.target.files && e.target.files.length > 0) {
+            selectedFileName.textContent = e.target.files[0].name;
+            confirmFileSelection.disabled = false;
+          } else {
+            selectedFileName.textContent = '';
+            confirmFileSelection.disabled = true;
+          }
+        });
+        
+        // Botão para confirmar a seleção
+        confirmFileSelection.addEventListener('click', () => {
+          if (mobileFileInput.files && mobileFileInput.files.length > 0) {
+            try {
+              // Chamar a função de importação com o arquivo selecionado
+              importCSV({
+                target: mobileFileInput,
+                file: mobileFileInput.files[0]
+              });
+              
+              // Fechar o modal
+              fileModal.style.display = 'none';
+            } catch (err) {
+              console.error('Erro ao importar arquivo:', err);
+              showToast('Erro ao importar arquivo. Tente novamente.', 'error');
+            }
+          }
+        });
+        
+        // Botão para cancelar
+        cancelFileSelection.addEventListener('click', () => {
+          fileModal.style.display = 'none';
+        });
+        
+        // Fechar o modal quando clica fora
+        fileModal.addEventListener('click', (e) => {
+          if (e.target === fileModal) {
+            fileModal.style.display = 'none';
+          }
+        });
+      }
+      
+      // Resetar o input de arquivo e o nome do arquivo
+      const mobileFileInput = document.getElementById('mobileFileInput');
+      const selectedFileName = document.getElementById('selectedFileName');
+      const confirmFileSelection = document.getElementById('confirmFileSelection');
+      
+      if (mobileFileInput) mobileFileInput.value = '';
+      if (selectedFileName) selectedFileName.textContent = '';
+      if (confirmFileSelection) confirmFileSelection.disabled = true;
+      
+      // Mostrar o modal
+      fileModal.style.display = 'flex';
+    };
+    
     // Override click handler to use mobile-friendly approach
-    const originalClickHandler = importButton.onclick;
     importButton.onclick = (e) => {
-      // For iOS and other systems that don't support file input well
-      if (isMobileDevice() && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-        e.preventDefault();
-        
-        alert('Para importar no iOS, use o botão "Escolher arquivo" e selecione um arquivo CSV.');
-        
-        // Improve file input for mobile
-        csvInput.accept = ".csv,text/csv";
-        csvInput.click();
-      } else if (originalClickHandler) {
-        originalClickHandler.call(importButton, e);
+      e.preventDefault();
+      
+      if (isMobileDevice()) {
+        createFileSelectionModal();
       } else {
+        // Comportamento padrão para desktop
         csvInput.click();
       }
     };
     
     // Add special handling for the file input on mobile
     csvInput.onchange = function(event) {
-      if (isMobileDevice()) {
+      if (event.target.files && event.target.files.length > 0) {
         importCSV(event);
       }
     };
