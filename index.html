@@ -359,6 +359,18 @@
                 <button type="button" class="btn-cancel" id="cancelExport">Cancelar</button>
                 <button type="button" class="btn-update" id="confirmExport">Exportar</button>
             </div>
+            <div class="export-actions-separator">
+                <div class="separator-line"></div>
+                <span>ou</span>
+                <div class="separator-line"></div>
+            </div>
+            <div class="export-images-only">
+                <button type="button" class="btn-secondary" id="exportOnlyImages">
+                    <i class="fas fa-images"></i>
+                    Exportar Somente Imagens
+                </button>
+                <p class="export-help-text">Faça download de todas as imagens como um arquivo ZIP</p>
+            </div>
         </div>
     </div>
 
@@ -376,6 +388,30 @@
             <div class="modal-actions">
                 <button type="button" class="btn-cancel" id="cancelDelete">Cancelar</button>
                 <button type="button" class="btn-update danger" id="confirmDelete">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para opções de exportação de imagens -->
+    <div class="modal-overlay" id="imagesExportModal">
+        <div class="edit-modal">
+            <h2>Exportar Imagens</h2>
+            <div class="export-options">
+                <div class="form-group checkbox-group" id="exportDeliveryImagesGroup">
+                    <input type="checkbox" id="exportDeliveryImages" checked>
+                    <label for="exportDeliveryImages">Incluir imagens de entregas</label>
+                </div>
+                <div class="form-group checkbox-group" id="exportGasImagesGroup">
+                    <input type="checkbox" id="exportGasImages" checked>
+                    <label for="exportGasImages">Incluir imagens de abastecimentos</label>
+                </div>
+            </div>
+            <div class="export-info">
+                <p class="export-help-text">As imagens serão exportadas como um arquivo ZIP para download</p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="cancelImagesExport">Cancelar</button>
+                <button type="button" class="btn-update" id="confirmImagesExport">Exportar Imagens</button>
             </div>
         </div>
     </div>

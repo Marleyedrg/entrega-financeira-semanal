@@ -1,7 +1,7 @@
 import { deliveries, gasEntries, loadDeliveries, loadGasEntries, updateTotals } from './data.js';
 import { formatDate, getCurrentDate, showToast } from './utils.js';
 import { generateDeliveryIdentifiers } from './idGenerator.js';
-import { optimizeStoredImages } from './imageUtils.js';
+import { optimizeStoredImages, formatImageDisplay } from './imageUtils.js';
 
 // Função para validar dados antes da exportação
 function validateExportData(data, type) {
@@ -412,12 +412,15 @@ export function showExportModal() {
   // Limpar e adicionar event listeners para os botões
   const cancelBtn = document.getElementById('cancelExport');
   const confirmBtn = document.getElementById('confirmExport');
+  const exportImagesBtn = document.getElementById('exportOnlyImages');
   
   const newCancelBtn = cancelBtn.cloneNode(true);
   const newConfirmBtn = confirmBtn.cloneNode(true);
+  const newExportImagesBtn = exportImagesBtn.cloneNode(true);
   
   cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
   confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+  exportImagesBtn.parentNode.replaceChild(newExportImagesBtn, exportImagesBtn);
   
   newCancelBtn.addEventListener('click', () => {
     modal.style.display = 'none';
@@ -440,6 +443,20 @@ export function showExportModal() {
     
     // Fechar o modal
     modal.style.display = 'none';
+  });
+
+  // Adicionar evento para o botão de exportar somente imagens
+  newExportImagesBtn.addEventListener('click', async () => {
+    try {
+      // Fechamos o modal antes de mostrar o novo modal de imagens
+      modal.style.display = 'none';
+      
+      // Mostrar o modal de opções de exportação de imagens
+      showImagesExportModal();
+    } catch (error) {
+      console.error('Erro ao abrir modal de exportação de imagens:', error);
+      showToast(error.message, 'error');
+    }
   });
   
   // Impedir que cliques na caixa modal propaguem para fechar o modal
@@ -616,4 +633,278 @@ export function exportCustomCSV(includeDeliveries = true, includeGas = true, inc
     console.error('Erro ao exportar dados:', error);
     showToast(error.message, 'error');
   }
+}
+
+/**
+ * Exporta apenas as imagens dos pedidos como um arquivo ZIP
+ * @param {boolean} includeDeliveryImages - Se deve incluir imagens das entregas
+ * @param {boolean} includeGasImages - Se deve incluir imagens dos abastecimentos
+ */
+export async function exportOnlyImages(includeDeliveryImages = true, includeGasImages = true) {
+  try {
+    // Verificar se o JSZip está disponível (adicionamos como dependência dinâmica)
+    if (typeof JSZip !== 'function') {
+      // Carregar JSZip dinamicamente se não estiver disponível
+      await loadJSZip();
+    }
+    
+    // Criar nova instância do JSZip
+    const zip = new JSZip();
+    let imageCount = 0;
+
+    // Adicionar imagens das entregas ao ZIP
+    if (includeDeliveryImages) {
+      deliveries.forEach(delivery => {
+        if (delivery.image) {
+          // Verificar o formato da imagem (otimizado ou completo)
+          const imageData = delivery.image.startsWith('data:') 
+            ? delivery.image.split(',')[1]  // Extrair apenas os dados base64
+            : delivery.image;               // Já está em formato otimizado
+          
+          // Nome do arquivo: orderNumber_date.jpg
+          const fileName = `pedido_${delivery.orderNumber}_${delivery.date}.jpg`;
+          zip.file(fileName, imageData, { base64: true });
+          imageCount++;
+        }
+      });
+    }
+
+    // Adicionar imagens dos abastecimentos ao ZIP
+    if (includeGasImages) {
+      gasEntries.forEach((entry, index) => {
+        if (entry.image) {
+          // Verificar o formato da imagem
+          const imageData = entry.image.startsWith('data:') 
+            ? entry.image.split(',')[1] 
+            : entry.image;
+          
+          // Nome do arquivo: gas_date_index.jpg
+          const fileName = `gasolina_${entry.date}_${index + 1}.jpg`;
+          zip.file(fileName, imageData, { base64: true });
+          imageCount++;
+        }
+      });
+    }
+
+    // Verificar se há imagens para exportar
+    if (imageCount === 0) {
+      throw new Error('Não há imagens para exportar');
+    }
+
+    // Gerar nome do arquivo ZIP
+    const date = new Date();
+    const { fileName } = generateDeliveryIdentifiers(date);
+    let suffix = '';
+    if (!includeDeliveryImages) suffix += '-no-delivery';
+    if (!includeGasImages) suffix += '-no-gas';
+    const zipFileName = `imagens${suffix}-${fileName}.zip`;
+
+    // Gerar o arquivo ZIP
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    
+    // Verificar se estamos em um dispositivo móvel
+    const isMobileDevice = window.innerWidth <= 768 || 
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    if (isMobileDevice) {
+      try {
+        // Para iOS Safari e outros navegadores móveis com suporte ao Web Share API
+        if (navigator.share && /iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+          const file = new File([zipBlob], zipFileName, { type: 'application/zip' });
+          
+          navigator.share({
+            files: [file],
+            title: 'Imagens Exportadas',
+            text: 'Imagens exportadas do Sistema de Entregas'
+          }).then(() => {
+            showToast(`Exportação de imagens concluída! ${imageCount} imagens exportadas.`, 'success');
+          }).catch(err => {
+            console.error('Erro ao compartilhar arquivo:', err);
+            // Fallback para download direto
+            downloadZipFile(zipBlob, zipFileName);
+          });
+        } else {
+          // Fallback para download direto
+          downloadZipFile(zipBlob, zipFileName);
+        }
+      } catch (error) {
+        console.error('Erro específico para mobile:', error);
+        downloadZipFile(zipBlob, zipFileName);
+      }
+    } else {
+      // Método tradicional para desktop
+      downloadZipFile(zipBlob, zipFileName);
+    }
+    
+    showToast(`Exportação de imagens concluída! ${imageCount} imagens exportadas.`, 'success');
+  } catch (error) {
+    console.error('Erro ao exportar imagens:', error);
+    showToast(error.message, 'error');
+  }
+}
+
+/**
+ * Função auxiliar para fazer download do arquivo ZIP
+ * @param {Blob} blob - Blob do arquivo ZIP
+ * @param {string} fileName - Nome do arquivo para download
+ */
+function downloadZipFile(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, 100);
+}
+
+/**
+ * Carrega a biblioteca JSZip dinamicamente
+ * @returns {Promise} Promessa resolvida quando a biblioteca é carregada
+ */
+function loadJSZip() {
+  return new Promise((resolve, reject) => {
+    // Verificar se o JSZip já está disponível
+    if (typeof JSZip === 'function') {
+      resolve();
+      return;
+    }
+    
+    // Criar elemento de script para carregar JSZip
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    script.integrity = 'sha512-XMVd28F1oH/O71fzwBnV7HucLxVwtxf26XV8P4wPk26EDxuGZ91N8bsOttmnomcCD3CS5ZMRL50H0GgOHvegtg==';
+    script.crossOrigin = 'anonymous';
+    
+    script.onload = () => {
+      resolve();
+    };
+    
+    script.onerror = () => {
+      reject(new Error('Falha ao carregar biblioteca JSZip'));
+    };
+    
+    document.head.appendChild(script);
+  });
+}
+
+/**
+ * Exibe o modal para seleção de opções de exportação de imagens
+ */
+export function showImagesExportModal() {
+  // Obter referência ao modal
+  const modal = document.getElementById('imagesExportModal');
+  if (!modal) {
+    console.error('Modal de exportação de imagens não encontrado');
+    return;
+  }
+  
+  // Exibir o modal
+  modal.style.display = 'flex';
+  
+  // Obter referências aos elementos do modal
+  const deliveryImagesCheckbox = document.getElementById('exportDeliveryImages');
+  const gasImagesCheckbox = document.getElementById('exportGasImages');
+  
+  const deliveryImagesGroup = document.getElementById('exportDeliveryImagesGroup');
+  const gasImagesGroup = document.getElementById('exportGasImagesGroup');
+  
+  // Limpar listeners antigos para evitar duplicação
+  const newDeliveryImagesGroup = deliveryImagesGroup.cloneNode(true);
+  const newGasImagesGroup = gasImagesGroup.cloneNode(true);
+  
+  deliveryImagesGroup.parentNode.replaceChild(newDeliveryImagesGroup, deliveryImagesGroup);
+  gasImagesGroup.parentNode.replaceChild(newGasImagesGroup, gasImagesGroup);
+  
+  // Obter os novos checkboxes após a clonagem
+  const newDeliveryImagesCheckbox = document.getElementById('exportDeliveryImages');
+  const newGasImagesCheckbox = document.getElementById('exportGasImages');
+  
+  // Adicionar evento de clique nos grupos completos para melhor experiência móvel
+  newDeliveryImagesGroup.addEventListener('click', (e) => {
+    if (e.target !== newDeliveryImagesCheckbox) {
+      newDeliveryImagesCheckbox.checked = !newDeliveryImagesCheckbox.checked;
+    }
+  });
+  
+  newGasImagesGroup.addEventListener('click', (e) => {
+    if (e.target !== newGasImagesCheckbox) {
+      newGasImagesCheckbox.checked = !newGasImagesCheckbox.checked;
+    }
+  });
+  
+  // Adicionar estilo para aumentar a área clicável
+  const styleGroups = [newDeliveryImagesGroup, newGasImagesGroup];
+  styleGroups.forEach(group => {
+    group.style.cursor = 'pointer';
+    group.style.padding = '12px 8px';
+    group.style.margin = '8px 0';
+    group.style.borderRadius = '4px';
+    group.style.border = '1px solid #e0e0e0';
+    group.style.transition = 'background-color 0.2s';
+    
+    // Adicionar efeito hover
+    group.addEventListener('mouseover', () => {
+      group.style.backgroundColor = '#f5f5f5';
+    });
+    
+    group.addEventListener('mouseout', () => {
+      group.style.backgroundColor = '';
+    });
+  });
+  
+  // Limpar e adicionar event listeners para os botões
+  const cancelBtn = document.getElementById('cancelImagesExport');
+  const confirmBtn = document.getElementById('confirmImagesExport');
+  
+  const newCancelBtn = cancelBtn.cloneNode(true);
+  const newConfirmBtn = confirmBtn.cloneNode(true);
+  
+  cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+  confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+  
+  newCancelBtn.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+  
+  newConfirmBtn.addEventListener('click', async () => {
+    try {
+      // Obter opções selecionadas
+      const includeDeliveryImages = document.getElementById('exportDeliveryImages').checked;
+      const includeGasImages = document.getElementById('exportGasImages').checked;
+      
+      // Validar que pelo menos um tipo de imagem foi selecionado
+      if (!includeDeliveryImages && !includeGasImages) {
+        showToast('Selecione pelo menos um tipo de imagem para exportar', 'error');
+        return;
+      }
+      
+      // Fechar o modal antes de começar o processo
+      modal.style.display = 'none';
+      
+      // Mostrar toast informativo enquanto processa
+      showToast('Preparando imagens para exportação...', 'info');
+      
+      // Exportar imagens com as opções selecionadas
+      await exportOnlyImages(includeDeliveryImages, includeGasImages);
+    } catch (error) {
+      console.error('Erro ao exportar imagens:', error);
+      showToast(error.message, 'error');
+    }
+  });
+  
+  // Impedir que cliques na caixa modal propaguem para fechar o modal
+  const modalContent = modal.querySelector('.edit-modal');
+  modalContent.addEventListener('click', event => {
+    event.stopPropagation();
+  });
+  
+  // Fechar o modal ao clicar fora dele
+  modal.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
 } 
