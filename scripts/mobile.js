@@ -108,13 +108,47 @@ function setupMobileFileHandling() {
       // Mostrar o nome do arquivo quando selecionado
       mobileFileInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files.length > 0) {
+          // Ocultar o card de seleção de arquivos
+          const fileInputWrapper = document.querySelector('.file-input-wrapper');
+          if (fileInputWrapper) {
+            fileInputWrapper.style.display = 'none';
+          }
+          
+          // Mostrar o nome do arquivo selecionado
           selectedFileName.textContent = e.target.files[0].name;
-          confirmFileSelection.disabled = false;
+          
+          // Mostrar um alerta que o arquivo foi importado
+          alert(`Arquivo "${e.target.files[0].name}" selecionado para importação`);
+          
+          // Auto-importar após um breve delay
+          setTimeout(() => {
+            try {
+              // Importar o arquivo automaticamente
+              importCSV({
+                target: mobileFileInput,
+                file: mobileFileInput.files[0]
+              });
+              
+              // Fechar o modal após a importação
+              fileModal.style.display = 'none';
+              setTimeout(() => {
+                if (document.body.contains(fileModal)) {
+                  document.body.removeChild(fileModal);
+                }
+              }, 300);
+            } catch (err) {
+              console.error('Erro ao importar arquivo:', err);
+              showToast('Erro ao importar arquivo. Tente novamente.', 'error');
+            }
+          }, 500);
         } else {
           selectedFileName.textContent = '';
           confirmFileSelection.disabled = true;
         }
       });
+      
+      // Remover o botão de confirmar já que agora importamos automaticamente
+      confirmFileSelection.style.display = 'none';
       
       // Melhorar o comportamento de clique no input
       const fileInputWrapper = document.querySelector('.file-input-wrapper');
@@ -130,30 +164,6 @@ function setupMobileFileHandling() {
           }
         });
       }
-      
-      // Botão para confirmar a seleção
-      confirmFileSelection.addEventListener('click', () => {
-        if (mobileFileInput.files && mobileFileInput.files.length > 0) {
-          try {
-            // Chamar a função de importação com o arquivo selecionado
-            importCSV({
-              target: mobileFileInput,
-              file: mobileFileInput.files[0]
-            });
-            
-            // Fechar o modal
-            fileModal.style.display = 'none';
-            setTimeout(() => {
-              if (document.body.contains(fileModal)) {
-                document.body.removeChild(fileModal);
-              }
-            }, 300);
-          } catch (err) {
-            console.error('Erro ao importar arquivo:', err);
-            showToast('Erro ao importar arquivo. Tente novamente.', 'error');
-          }
-        }
-      });
       
       // Botão para cancelar
       cancelFileSelection.addEventListener('click', () => {
