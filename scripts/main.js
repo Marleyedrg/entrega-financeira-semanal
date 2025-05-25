@@ -7,10 +7,14 @@ import { updateTotals } from './data.js';
 import { initializeApp } from './setup.js';
 import { initializeImageZoom } from './imageZoom.js';
 import { showExportModal } from './export.js';
+import { cleanupUnusedResources } from './mobileOptimizations.js';
 
 // Espera o DOM estar pronto
 document.addEventListener('DOMContentLoaded', async () => {
   try {
+    // Cleanup any resources first to ensure a clean startup
+    cleanupUnusedResources();
+    
     // Carrega os dados
     await Promise.all([
       loadDeliveries(),
@@ -40,6 +44,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Event listener para modal de exportação
     const exportBtn = document.getElementById('exportButton');
     if (exportBtn) exportBtn.addEventListener('click', showExportModal);
+    
+    // Listen for browser beforesunload event to clean up resources
+    window.addEventListener('beforeunload', () => {
+      cleanupUnusedResources();
+    });
+    
+    // Force cleanup every time main tab is changed
+    const tabButtons = document.querySelectorAll('.tab-button');
+    if (tabButtons.length) {
+      tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          setTimeout(() => cleanupUnusedResources(), 100);
+        });
+      });
+    }
+    
   } catch (error) {
     console.error('Erro ao inicializar aplicação:', error);
   }

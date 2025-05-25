@@ -119,21 +119,53 @@ export function handleGasFormSubmit(event) {
   }
 }
 
+// Flag to track if image is currently being processed
+let isProcessingImage = false;
+
+// Debounce function to prevent multiple rapid calls
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
 /**
  * Manipula o upload de imagem
  * @param {Event} event - Evento de change do input de arquivo
  */
 export async function handleImageUpload(event) {
-  const file = event.target.files[0];
+  // Check if already processing
+  if (isProcessingImage) {
+    console.log('Já existe um processamento de imagem em andamento, aguardando...');
+    return;
+  }
+
+  const file = event.target.files?.[0];
   if (!file) return;
   
   try {
+    isProcessingImage = true;
+    
     const imagePreview = document.getElementById('imagePreview');
     const imageError = document.getElementById('imageError');
+    const imageInput = document.getElementById('image');
     
-    imageError.textContent = '';
-    imagePreview.innerHTML = `<div class="processing-indicator">Processando imagem...</div>`;
+    // Reset file input to prevent issues with selecting the same file again
+    if (imageInput) {
+      // Clone and replace to ensure clean state
+      const newInput = imageInput.cloneNode(true);
+      imageInput.parentNode.replaceChild(newInput, imageInput);
+      // Add event listener to the new input
+      newInput.addEventListener('change', debouncedImageUpload);
+    }
     
+    // Clear previous errors and show processing indicator
+    if (imageError) imageError.textContent = '';
+    if (imagePreview) imagePreview.innerHTML = `<div class="processing-indicator">Processando imagem...</div>`;
+    
+    // Process the image
     const compressedImage = await processImageForStorage(file);
     
     if (compressedImage) {
@@ -150,11 +182,20 @@ export async function handleImageUpload(event) {
       imageError.textContent = 'Erro ao processar a imagem. Tente novamente.';
     }
   } catch (error) {
-    document.getElementById('imagePreview').innerHTML = '';
-    document.getElementById('imageError').textContent = 'Erro ao processar a imagem. Verifique o tamanho e formato.';
-    console.error(error);
+    console.error('Erro ao processar imagem:', error);
+    
+    const imagePreview = document.getElementById('imagePreview');
+    const imageError = document.getElementById('imageError');
+    
+    if (imagePreview) imagePreview.innerHTML = '';
+    if (imageError) imageError.textContent = 'Erro ao processar a imagem. Verifique o tamanho e formato.';
+  } finally {
+    isProcessingImage = false;
   }
 }
+
+// Create debounced version of image upload handler
+const debouncedImageUpload = debounce(handleImageUpload, 300);
 
 /**
  * Configura os event listeners do formulário
@@ -169,48 +210,73 @@ export function setupOrderForm() {
   // Set current date as default
   date.value = getCurrentDate();
   
-  // Remove existing listeners
-  orderForm.onsubmit = null;
-  uploadButton.onclick = null;
-  imageInput.onchange = null;
+  // Remove existing listeners by replacing elements with clones
+  if (orderForm) {
+    const newOrderForm = orderForm.cloneNode(true);
+    orderForm.parentNode.replaceChild(newOrderForm, orderForm);
+    newOrderForm.addEventListener('submit', handleOrderFormSubmit);
+  }
   
-  // Add new listeners
-  orderForm.addEventListener('submit', handleOrderFormSubmit);
-  uploadButton.addEventListener('click', () => imageInput.click());
-  imageInput.addEventListener('change', handleImageUpload);
+  // Get the new references after cloning
+  const newUploadButton = document.getElementById('uploadButton');
+  const newImageInput = document.getElementById('image');
+  const newOrderNumber = document.getElementById('orderNumber');
+  const newDate = document.getElementById('date');
+  
+  // Setup event listeners for new elements
+  if (newUploadButton && newImageInput) {
+    newUploadButton.addEventListener('click', () => {
+      // Only trigger click if not currently processing
+      if (!isProcessingImage) {
+        // Clear the input value to ensure change event triggers even with the same file
+        newImageInput.value = '';
+        newImageInput.click();
+      } else {
+        showToast('Aguarde o processamento da imagem atual...', 'info');
+      }
+    });
+    
+    // Use debounced handler to prevent multiple rapid calls
+    newImageInput.addEventListener('change', debouncedImageUpload);
+  }
   
   // Adiciona validação em tempo real para número do pedido
-  orderNumber.addEventListener('input', () => {
-    const number = orderNumber.value.trim();
-    const currentDate = date.value;
+  if (newOrderNumber && newDate) {
+    newOrderNumber.addEventListener('input', () => {
+      const number = newOrderNumber.value.trim();
+      const currentDate = newDate.value;
+      
+      if (number && currentDate && isOrderNumberTaken(number, currentDate)) {
+        newOrderNumber.classList.add('invalid');
+        newOrderNumber.title = `Pedido #${number} já existe em ${currentDate}`;
+      } else {
+        newOrderNumber.classList.remove('invalid');
+        newOrderNumber.title = '';
+      }
+    });
     
-    if (number && currentDate && isOrderNumberTaken(number, currentDate)) {
-      orderNumber.classList.add('invalid');
-      orderNumber.title = `Pedido #${number} já existe em ${currentDate}`;
-    } else {
-      orderNumber.classList.remove('invalid');
-      orderNumber.title = '';
-    }
-  });
-  
-  // Atualiza validação quando a data muda
-  date.addEventListener('change', () => {
-    const number = orderNumber.value.trim();
-    const currentDate = date.value;
-    
-    if (number && currentDate && isOrderNumberTaken(number, currentDate)) {
-      orderNumber.classList.add('invalid');
-      orderNumber.title = `Pedido #${number} já existe em ${currentDate}`;
-    } else {
-      orderNumber.classList.remove('invalid');
-      orderNumber.title = '';
-    }
-  });
+    // Atualiza validação quando a data muda
+    newDate.addEventListener('change', () => {
+      const number = newOrderNumber.value.trim();
+      const currentDate = newDate.value;
+      
+      if (number && currentDate && isOrderNumberTaken(number, currentDate)) {
+        newOrderNumber.classList.add('invalid');
+        newOrderNumber.title = `Pedido #${number} já existe em ${currentDate}`;
+      } else {
+        newOrderNumber.classList.remove('invalid');
+        newOrderNumber.title = '';
+      }
+    });
+  }
   
   // Setup global image clear function
   window.clearOrderImage = () => {
-    document.getElementById('imagePreview').innerHTML = '';
-    document.getElementById('imageError').textContent = 'O comprovante é obrigatório';
+    const imagePreview = document.getElementById('imagePreview');
+    const imageError = document.getElementById('imageError');
+    
+    if (imagePreview) imagePreview.innerHTML = '';
+    if (imageError) imageError.textContent = 'O comprovante é obrigatório';
   };
 }
 

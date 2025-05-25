@@ -3,6 +3,7 @@ import { renderAnalytics } from './analytics.js';
 import { importCSV } from './import.js';
 import { exportCustomCSV, backupData, showExportModal } from './export.js';
 import { showToast } from './utils.js';
+import { applyMemoryOptimizations, cleanupUnusedResources, fixFileInputIssues } from './mobileOptimizations.js';
 
 /**
  * Check if device is mobile
@@ -35,6 +36,12 @@ export function setupMobileOptimizations() {
     setupMobileFileHandling();
   }
 
+  // Apply memory optimizations for all devices (but with more aggressive settings for mobile)
+  applyMemoryOptimizations();
+  
+  // Fix file input issues that can cause memory problems
+  fixFileInputIssues();
+  
   // Apply chart optimizations
   setupChartOptimizations();
 }
@@ -62,6 +69,12 @@ function setupMobileFileHandling() {
     
     const newCsvInput = csvInput.cloneNode(true);
     csvInput.parentNode.replaceChild(newCsvInput, csvInput);
+
+    // Add memory cleanup before file selection
+    newImportButton.addEventListener('click', () => {
+      // Clean up any unused resources before opening file picker
+      cleanupUnusedResources();
+    });
 
     // Criar um modal mais amigável para selecionar arquivos
     const createFileSelectionModal = () => {
@@ -147,6 +160,11 @@ function setupMobileFileHandling() {
         }
       });
       
+      // Add memory cleanup for the modal file input
+      mobileFileInput.addEventListener('focus', () => {
+        cleanupUnusedResources();
+      });
+      
       // Remover o botão de confirmar já que agora importamos automaticamente
       confirmFileSelection.style.display = 'none';
       
@@ -156,6 +174,9 @@ function setupMobileFileHandling() {
         fileInputWrapper.addEventListener('click', (e) => {
           // Evitar que o evento de clique no wrapper cause conflito
           e.stopPropagation();
+          
+          // Clean up resources before opening file picker
+          cleanupUnusedResources();
           
           // Focar e clicar no input de arquivo
           if (mobileFileInput) {

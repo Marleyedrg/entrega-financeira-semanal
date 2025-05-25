@@ -7,10 +7,20 @@ import { updateDeliveriesTable } from './data.js';
 const state = {
   currentEditId: null,
   isEditing: false,
-  hasUnsavedChanges: false
+  hasUnsavedChanges: false,
+  isProcessingImage: false // Flag to track if image is currently being processed
 };
 
 let scrollPosition = 0;
+
+// Debounce function to prevent multiple rapid calls
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
 
 export function isEditing() {
   return state.isEditing;
@@ -38,6 +48,7 @@ export function startEditing(orderId) {
 
   state.currentEditId = orderId;
   state.isEditing = true;
+  state.isProcessingImage = false;
   setUnsavedChanges(false);
 
   // Populate form fields
@@ -67,7 +78,14 @@ export function startEditing(orderId) {
     img.src = `data:image/jpeg;base64,${order.image}`;
     img.alt = 'Preview';
     img.className = 'preview-image';
-    imagePreview.appendChild(img);
+    imagePreview.innerHTML = `
+      <div class="image-preview-item">
+        <img src="${img.src}" 
+            alt="Preview" 
+            class="preview-image">
+        <button type="button" class="delete-image" onclick="clearEditImage()">×</button>
+      </div>
+    `;
   }
   
   const modal = document.getElementById('editModal');
@@ -88,21 +106,39 @@ function setupEditListeners() {
   const uploadButton = document.getElementById('editUploadButton');
   const imageInput = document.getElementById('editImage');
   const modal = document.getElementById('editModal');
-  const formInputs = editForm.querySelectorAll('input');
+  
+  // Clone form inputs to remove existing listeners
+  const newEditForm = editForm.cloneNode(true);
+  editForm.parentNode.replaceChild(newEditForm, editForm);
+  
+  const newCancelButton = document.getElementById('cancelEdit');
+  const newUploadButton = document.getElementById('editUploadButton');
+  const newImageInput = document.getElementById('editImage');
+  
+  // Get all form inputs after cloning
+  const formInputs = newEditForm.querySelectorAll('input');
 
-  // Remove listeners existentes para evitar duplicação
-  editForm.removeEventListener('submit', handleEditSubmit);
-  cancelButton.removeEventListener('click', handleCancelEdit);
-  modal.removeEventListener('click', handleModalClick);
-  uploadButton.removeEventListener('click', handleUploadClick);
-  imageInput.removeEventListener('change', handleImageChange);
-
-  // Adiciona novos listeners
-  editForm.addEventListener('submit', handleEditSubmit);
-  cancelButton.addEventListener('click', handleCancelEdit);
+  // Add new listeners
+  newEditForm.addEventListener('submit', handleEditSubmit);
+  newCancelButton.addEventListener('click', handleCancelEdit);
+  
+  // Add modal click listener
   modal.addEventListener('click', handleModalClick);
-  uploadButton.addEventListener('click', handleUploadClick);
-  imageInput.addEventListener('change', handleImageChange);
+  
+  // Setup image upload with debouncing
+  newUploadButton.addEventListener('click', () => {
+    // Only trigger click if not currently processing
+    if (!state.isProcessingImage) {
+      // Clear the input value to ensure change event triggers even with the same file
+      newImageInput.value = '';
+      newImageInput.click();
+    } else {
+      showToast('Aguarde o processamento da imagem atual...', 'info');
+    }
+  });
+  
+  // Use debounced handler to prevent multiple rapid calls
+  newImageInput.addEventListener('change', debouncedImageChange);
 
   // Monitora mudanças no formulário
   formInputs.forEach(input => {
@@ -112,14 +148,24 @@ function setupEditListeners() {
 
   // Configura função global para limpar imagem
   window.clearEditImage = () => {
-    document.getElementById('editImagePreview').innerHTML = '';
-    document.getElementById('editImageError').textContent = 'O comprovante é obrigatório';
+    const imagePreview = document.getElementById('editImagePreview');
+    const imageError = document.getElementById('editImageError');
+    
+    if (imagePreview) imagePreview.innerHTML = '';
+    if (imageError) imageError.textContent = 'O comprovante é obrigatório';
     setUnsavedChanges(true);
   };
 }
 
 function handleUploadClick() {
-  document.getElementById('editImage').click();
+  const imageInput = document.getElementById('editImage');
+  
+  // Only proceed if not currently processing
+  if (!state.isProcessingImage && imageInput) {
+    imageInput.click();
+  } else {
+    showToast('Aguarde o processamento da imagem atual...', 'info');
+  }
 }
 
 function handleModalClick(event) {
@@ -139,19 +185,37 @@ function handleModalClick(event) {
 }
 
 async function handleImageChange(event) {
-  const file = event.target.files[0];
+  // Check if already processing
+  if (state.isProcessingImage) {
+    console.log('Já existe um processamento de imagem em andamento, aguardando...');
+    return;
+  }
+
+  const file = event.target.files?.[0];
   if (!file) return;
 
   try {
+    state.isProcessingImage = true;
+    
     const imagePreview = document.getElementById('editImagePreview');
     const imageError = document.getElementById('editImageError');
+    const imageInput = document.getElementById('editImage');
     
-    imageError.textContent = '';
-    imagePreview.innerHTML = `<div class="processing-indicator">Processando imagem...</div>`;
+    // Reset file input to prevent issues with selecting the same file again
+    if (imageInput) {
+      // Clone and replace to ensure clean state
+      const newInput = imageInput.cloneNode(true);
+      imageInput.parentNode.replaceChild(newInput, imageInput);
+      // Add event listener to the new input
+      newInput.addEventListener('change', debouncedImageChange);
+    }
+    
+    if (imageError) imageError.textContent = '';
+    if (imagePreview) imagePreview.innerHTML = `<div class="processing-indicator">Processando imagem...</div>`;
     
     const compressedImage = await processImageForStorage(file);
     
-    if (compressedImage) {
+    if (compressedImage && imagePreview) {
       imagePreview.innerHTML = `
         <div class="image-preview-item">
           <img src="${compressedImage}" 
@@ -162,15 +226,24 @@ async function handleImageChange(event) {
       `;
       setUnsavedChanges(true);
     } else {
-      imagePreview.innerHTML = '';
-      imageError.textContent = 'Erro ao processar a imagem. Tente novamente.';
+      if (imagePreview) imagePreview.innerHTML = '';
+      if (imageError) imageError.textContent = 'Erro ao processar a imagem. Tente novamente.';
     }
   } catch (error) {
-    document.getElementById('editImagePreview').innerHTML = '';
-    document.getElementById('editImageError').textContent = 'Erro ao processar a imagem. Verifique o tamanho e formato.';
-    console.error(error);
+    console.error('Erro ao processar imagem:', error);
+    
+    const imagePreview = document.getElementById('editImagePreview');
+    const imageError = document.getElementById('editImageError');
+    
+    if (imagePreview) imagePreview.innerHTML = '';
+    if (imageError) imageError.textContent = 'Erro ao processar a imagem. Verifique o tamanho e formato.';
+  } finally {
+    state.isProcessingImage = false;
   }
 }
+
+// Create debounced version of image change handler
+const debouncedImageChange = debounce(handleImageChange, 300);
 
 export async function handleEditSubmit(event) {
   event.preventDefault();
@@ -233,6 +306,7 @@ export function cancelEdit() {
   
   state.currentEditId = null;
   state.isEditing = false;
+  state.isProcessingImage = false;
   setUnsavedChanges(false);
   
   // Clear form

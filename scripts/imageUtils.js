@@ -33,53 +33,77 @@ export function checkStorageSpace() {
  */
 export function compressImage(file, maxWidth = 800, quality = 0.7) {
   return new Promise((resolve, reject) => {
+    // Create a unique object URL
     const url = URL.createObjectURL(file);
     const img = new Image();
     
-    img.onload = () => {
-      // Create canvas for compression
-      const canvas = document.createElement('canvas');
-      let width = img.width;
-      let height = img.height;
-      
-      // Resize if necessary
-      if (width > maxWidth) {
-        height = Math.floor(height * (maxWidth / width));
-        width = maxWidth;
-      }
-      
-      canvas.width = width;
-      canvas.height = height;
-      
-      // Draw image on canvas
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      
-      // Convert to compressed format
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            // Release temporary URL
-            URL.revokeObjectURL(url);
-            resolve(reader.result);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        } else {
-          reject(new Error('Falha na compressão da imagem'));
-        }
-      }, 'image/jpeg', quality);
-    };
-    
+    // Set up error handling first
     img.onerror = () => {
+      // Clean up resources
       URL.revokeObjectURL(url);
       reject(new Error('Falha ao carregar a imagem'));
     };
     
+    img.onload = () => {
+      try {
+        // Create canvas for compression
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        // Resize if necessary
+        if (width > maxWidth) {
+          height = Math.floor(height * (maxWidth / width));
+          width = maxWidth;
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Draw image on canvas
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to compressed format
+        canvas.toBlob((blob) => {
+          // Always release the object URL immediately after use
+          URL.revokeObjectURL(url);
+          
+          if (blob) {
+            const reader = new FileReader();
+            
+            reader.onloadend = () => {
+              // Ensure we're resolving with a valid result
+              if (reader.result) {
+                resolve(reader.result);
+              } else {
+                reject(new Error('Resultado da compressão da imagem é inválido'));
+              }
+            };
+            
+            reader.onerror = (e) => {
+              reject(new Error(`Erro ao ler blob comprimido: ${e.message}`));
+            };
+            
+            reader.readAsDataURL(blob);
+          } else {
+            reject(new Error('Falha na compressão da imagem - blob nulo'));
+          }
+        }, 'image/jpeg', quality);
+      } catch (err) {
+        // Make sure to release the URL in case of error
+        URL.revokeObjectURL(url);
+        reject(new Error(`Erro ao processar imagem: ${err.message}`));
+      }
+    };
+    
+    // Start loading the image
     img.src = url;
   });
 }
+
+// Track ongoing image processing operations
+const processingOperations = new Set();
 
 /**
  * Process and optimize an image for storage with mobile-specific settings
@@ -89,7 +113,18 @@ export function compressImage(file, maxWidth = 800, quality = 0.7) {
 export async function processImageForStorage(file) {
   if (!file) return null;
   
+  // Generate a unique ID for this processing operation
+  const operationId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+  
+  // Register this operation
+  processingOperations.add(operationId);
+  
   try {
+    // Force garbage collection between operations if possible
+    if (window.gc) {
+      try { window.gc(); } catch (e) { console.log('GC not available'); }
+    }
+    
     // Validar tipo de arquivo
     const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
@@ -113,6 +148,12 @@ export async function processImageForStorage(file) {
     if (file.size > 3 * 1024 * 1024) { // Mais que 3MB
       quality = mobile ? 0.4 : 0.6;
       maxWidth = mobile ? 600 : 800;
+    }
+    
+    // Check if this operation is still valid before proceeding
+    if (!processingOperations.has(operationId)) {
+      console.log('Operation cancelled - newer operation started');
+      return null;
     }
     
     // Compress the image
@@ -139,6 +180,9 @@ export async function processImageForStorage(file) {
     } else {
       throw new Error('Erro ao processar a imagem. ' + error.message);
     }
+  } finally {
+    // Clean up operation tracking
+    processingOperations.delete(operationId);
   }
 }
 
