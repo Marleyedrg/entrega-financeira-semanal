@@ -3,7 +3,13 @@
  * Sistema avançado de sincronização entre múltiplas abas
  */
 
-import { loadDeliveries, loadGasEntries, updateTotals } from './data.js';
+import { 
+  loadDeliveries, 
+  loadGasEntries, 
+  updateTotals, 
+  deliveries, 
+  gasEntries 
+} from './data.js';
 import { showToast } from './utils.js';
 import { renderAnalytics, clearDataCache } from './analytics.js';
 
@@ -168,6 +174,11 @@ function handleSyncMessage(message) {
         });
       }
       break;
+      
+    case 'FULL_CLEAR':
+      // Recebeu notificação de limpeza completa dos dados
+      handleFullDataClear();
+      break;
   }
 }
 
@@ -218,37 +229,80 @@ function claimPrimaryStatus() {
 }
 
 /**
- * Sincronizar dados com localStorage
+ * Lida com a limpeza completa dos dados
+ * Chamada quando outra aba executa uma limpeza completa
  */
-function syncData() {
-  if (syncState.syncInProgress) return;
+function handleFullDataClear() {
+  // Atualizar timestamp para evitar que mensagens antigas sejam processadas
+  lastUpdateTimestamp = Date.now();
   
   try {
-    syncState.syncInProgress = true;
+    // Limpar cache local
+    if (broadcastChannel) {
+      // Fechar e recriar o canal para limpar buffers internos
+      broadcastChannel.close();
+      
+      // Recriar o canal após um pequeno delay
+      setTimeout(() => {
+        try {
+          broadcastChannel = new BroadcastChannel('entrega_financeira_sync');
+          broadcastChannel.onmessage = (event) => {
+            handleSyncMessage(event.data);
+          };
+        } catch (e) {
+          console.error('Erro ao recriar canal após limpeza:', e);
+        }
+      }, 300);
+    }
+    
+    // Forçar recarga de dados
+    syncData(true);
+    
+    console.log('Sincronização completa após limpeza de dados');
+  } catch (error) {
+    console.error('Erro ao processar limpeza de dados:', error);
+  }
+}
+
+/**
+ * Sincronizar dados com localStorage
+ * @param {boolean} forceFull - Forçar sincronização completa, ignorando cache
+ */
+function syncData(forceFull = false) {
+  if (syncState.syncInProgress && !forceFull) return;
+  
+  syncState.syncInProgress = true;
+  
+  try {
+    console.log('Sincronizando dados da memória com localStorage...');
+    
+    // Limpar cache se for sincronização forçada
+    if (forceFull) {
+      console.log('Executando sincronização forçada completa');
+      // Não utilize cache para esta sincronização
+      
+      // Limpar arrays em memória primeiro
+      // (não usamos .length = 0 para preservar as referências originais)
+      while (deliveries.length > 0) deliveries.pop();
+      while (gasEntries.length > 0) gasEntries.pop();
+    }
     
     // Recarregar dados do localStorage
     loadDeliveries();
     loadGasEntries();
     
-    // Limpar cache e atualizar UI
-    clearDataCache();
+    // Atualizar interface
     updateTotals();
     
-    // Renderizar análises se estiver na tab de analytics
-    const analyticsTab = document.querySelector('.tab-content.active#analytics');
-    if (analyticsTab) {
-      renderAnalytics();
-    }
+    // Limpar cache de análise e renderizar novamente
+    clearDataCache();
+    renderAnalytics();
     
-    // Atualizar timestamp de sincronização
     syncState.lastSyncTime = Date.now();
-    
-    // Notificar usuário sobre sincronização
-    if (document.hasFocus()) {
-      showToast('Dados sincronizados com outras abas', 'info');
-    }
+    console.log('Sincronização completa:', new Date(syncState.lastSyncTime).toLocaleTimeString());
   } catch (error) {
-    console.error('Erro ao sincronizar dados:', error);
+    console.error('Erro durante sincronização:', error);
+    showToast('Erro ao sincronizar dados', 'error');
   } finally {
     syncState.syncInProgress = false;
   }

@@ -3,7 +3,8 @@ import { renderAnalytics } from './analytics.js';
 import { importCSV } from './import.js';
 import { exportCustomCSV, backupData, showExportModal } from './export.js';
 import { showToast } from './utils.js';
-import { applyMemoryOptimizations, cleanupUnusedResources, fixFileInputIssues } from './mobileOptimizations.js';
+// Import specific functions instead of creating circular dependency
+// Don't import from mobileOptimizations.js here
 
 /**
  * Check if device is mobile
@@ -12,6 +13,71 @@ import { applyMemoryOptimizations, cleanupUnusedResources, fixFileInputIssues } 
 export function isMobileDevice() {
   return window.innerWidth <= 768 || 
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+// Function to clean up resources moved from mobileOptimizations to avoid circular reference
+export function cleanupUnusedResources() {
+  try {
+    // Clear any object URLs that might be hanging around
+    const images = document.querySelectorAll('img[src^="blob:"]');
+    images.forEach(img => {
+      if (img.src.startsWith('blob:')) {
+        URL.revokeObjectURL(img.src);
+      }
+    });
+
+    // Clean up any unused canvas elements
+    const canvases = document.querySelectorAll('canvas');
+    canvases.forEach(canvas => {
+      if (!document.body.contains(canvas)) {
+        canvas.width = 0;
+        canvas.height = 0;
+      }
+    });
+
+    // Force browser to free memory if possible
+    if (window.gc) {
+      try {
+        window.gc();
+      } catch (e) {
+        console.log('Garbage collection not available');
+      }
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error cleaning up resources:', error);
+    return false;
+  }
+}
+
+// We'll implement basic memory optimizations here to avoid circular references
+export function applyMemoryOptimizations() {
+  // Setup cleanup on file input focus
+  const fileInputs = document.querySelectorAll('input[type="file"]');
+  fileInputs.forEach(input => {
+    input.addEventListener('focus', () => {
+      // Clean up resources before opening file picker
+      cleanupUnusedResources();
+    });
+  });
+  
+  // Apply additional memory optimization logic as needed
+}
+
+// Function for handling file input issues
+export function fixFileInputIssues() {
+  // Find all file inputs
+  const fileInputs = document.querySelectorAll('input[type="file"]');
+  fileInputs.forEach(input => {
+    // Remove capture attribute which can cause issues on some mobile browsers
+    input.removeAttribute('capture');
+    
+    // Ensure accept attribute is set correctly
+    if (input.accept && input.accept.includes('image')) {
+      input.accept = "image/jpeg,image/png,image/webp,image/*;capture=camera";
+    }
+  });
 }
 
 /**

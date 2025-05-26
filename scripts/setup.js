@@ -124,8 +124,47 @@ function setupEditForms() {
 
   const clearDataButton = document.getElementById('clearDataButton');
   if (clearDataButton) {
-    clearDataButton.addEventListener('click', clearAllData);
-    clearDataButton.title = "Limpar todos os dados";
+    // Remover eventos existentes para evitar duplicação
+    clearDataButton.replaceWith(clearDataButton.cloneNode(true));
+    
+    // Obter referência ao novo botão
+    const newClearDataButton = document.getElementById('clearDataButton');
+    
+    // Adicionar listener com confirmação de segurança
+    newClearDataButton.addEventListener('click', () => {
+      // Confirmação adicional para evitar limpeza acidental
+      if (confirm('ATENÇÃO: Todos os dados serão permanentemente excluídos. Esta ação não pode ser desfeita.\n\nDeseja continuar?')) {
+        clearAllData(); // Chama a função que limpa todos os dados
+        
+        // Verificar se a limpeza foi bem-sucedida
+        setTimeout(() => {
+          // Validar se localStorage está vazio
+          if (localStorage.length === 0) {
+            console.log('Limpeza de dados validada com sucesso');
+          } else {
+            console.warn('Possível falha na limpeza - ainda existem dados no localStorage');
+            // Tentar limpeza direta como fallback
+            try {
+              localStorage.clear();
+              sessionStorage.clear();
+              
+              // Forçar atualização de dados
+              loadDeliveries();
+              loadGasEntries();
+              updateTotals();
+              
+              showToast('Dados limpos (fallback)', 'info');
+            } catch (e) {
+              console.error('Erro na limpeza fallback:', e);
+            }
+          }
+          
+          // Forçar sincronização entre abas
+          forceSyncAllTabs();
+        }, 500);
+      }
+    });
+    newClearDataButton.title = "Limpar todos os dados";
   }
 
   // Setup for import button (with mobile handling via mobile.js)
@@ -327,15 +366,32 @@ setAppHeight();
 function initializeApp() {
   console.time('Inicialização da Aplicação');
   
+  // Fix para altura em dispositivos móveis
+  setAppHeight();
+  window.addEventListener('resize', () => {
+    setAppHeight();
+  });
+  
+  // Verificar integridade dos dados ao iniciar
+  checkDataIntegrity();
+  
+  // Verificar e reparar problemas de integridade automaticamente
+  checkDataIntegrityOnStartup();
+  
+  // Carregar dados
+  loadDeliveries();
+  loadGasEntries();
+  updateTotals();
+  
+  // Inicializar sistema de sincronização
+  initializeSync();
+  
   // Inicializar sistema de sincronização entre abas
   const syncStatus = initializeSync();
   console.log('Sistema de sincronização inicializado:', syncStatus.sessionId);
   
   // Carrega dados do localStorage
   initializeData();
-  
-  // Verificar integridade dos dados automaticamente durante a inicialização
-  checkDataIntegrityOnStartup();
   
   // Garante que todas as entregas têm status definidos
   deliveries.forEach(delivery => {
@@ -483,6 +539,65 @@ function updateSyncStatus() {
       text.textContent = `Última sincronização: ${timeText}`;
     } else {
       text.textContent = isActive ? 'Aba principal' : 'Sincronização automática ativada';
+    }
+  }
+}
+
+// Função para verificar integridade dos dados
+function checkDataIntegrity() {
+  try {
+    // Já verificado nesta sessão? (evita múltiplas verificações)
+    if (sessionStorage.getItem('integrity_checked')) {
+      return;
+    }
+    
+    // Verificar localStorage
+    let dataIntegrityIssue = false;
+    
+    // Validar entradas JSON
+    try {
+      const rawDeliveries = localStorage.getItem('deliveries');
+      if (rawDeliveries) {
+        JSON.parse(rawDeliveries);
+      }
+      
+      const rawGasEntries = localStorage.getItem('gasEntries');
+      if (rawGasEntries) {
+        JSON.parse(rawGasEntries);
+      }
+    } catch (e) {
+      console.error('Dados corrompidos no localStorage:', e);
+      dataIntegrityIssue = true;
+    }
+    
+    // Se houver problemas, limpar dados
+    if (dataIntegrityIssue) {
+      console.warn('Problemas de integridade encontrados. Reiniciando armazenamento.');
+      
+      // Limpar todos os dados
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Recarregar dados (agora vazios)
+      loadDeliveries();
+      loadGasEntries();
+      updateTotals();
+      
+      showToast('Dados reiniciados devido a um problema de integridade', 'warning');
+    }
+    
+    // Marcar como verificado
+    sessionStorage.setItem('integrity_checked', 'true');
+    
+  } catch (error) {
+    console.error('Erro ao verificar integridade dos dados:', error);
+    
+    // Em caso de erro na verificação, limpar dados como precaução
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (e) {
+      console.error('Falha ao limpar dados corrompidos:', e);
     }
   }
 } 

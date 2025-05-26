@@ -50,7 +50,7 @@ export function parseCSVDate(dateStr) {
 }
 
 // Função para mostrar notificações toast
-export function showToast(message, type = 'info') {
+export function showToast(message, type = 'info', duration = 3000) {
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.textContent = message;
@@ -61,12 +61,36 @@ export function showToast(message, type = 'info') {
     toast.classList.add('show');
   }, 100);
   
-  setTimeout(() => {
-    toast.classList.remove('show');
+  // If duration is 0, don't auto-hide the toast
+  if (duration !== 0) {
     setTimeout(() => {
-      document.body.removeChild(toast);
-    }, 300);
-  }, 3000);
+      toast.classList.remove('show');
+      setTimeout(() => {
+        if (document.body.contains(toast)) {
+          document.body.removeChild(toast);
+        }
+      }, 300);
+    }, duration);
+  }
+  
+  return toast;
+}
+
+// Função para resolver caminhos relativos considerando o GitHub Pages
+export function getResourcePath(path) {
+  // Se a função global existir (definida em index.html), use-a
+  if (window.getResourcePath) {
+    return window.getResourcePath(path);
+  }
+  
+  // Caso contrário, implemente a lógica aqui
+  if (!path) return path;
+  if (path.startsWith('http') || path.startsWith('//') || path.startsWith('data:')) return path;
+  
+  const basePath = window.__APP_BASE_PATH || '/';
+  // Remove leading slash if exists to avoid double slashes
+  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  return basePath + cleanPath;
 }
 
 // Export image handling functions from imageUtils.js

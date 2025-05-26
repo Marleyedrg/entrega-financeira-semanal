@@ -152,6 +152,13 @@ export async function handleImageUpload(event) {
     const imageError = document.getElementById('imageError');
     const imageInput = document.getElementById('image');
     
+    // Clear previous errors and show processing indicator
+    if (imageError) imageError.textContent = '';
+    if (imagePreview) imagePreview.innerHTML = `<div class="processing-indicator">Processando imagem...</div>`;
+    
+    // Clean up any previous preview images to free memory
+    cleanupPreviousPreview();
+    
     // Reset file input to prevent issues with selecting the same file again
     if (imageInput) {
       // Clone and replace to ensure clean state
@@ -161,22 +168,66 @@ export async function handleImageUpload(event) {
       newInput.addEventListener('change', debouncedImageUpload);
     }
     
-    // Clear previous errors and show processing indicator
-    if (imageError) imageError.textContent = '';
-    if (imagePreview) imagePreview.innerHTML = `<div class="processing-indicator">Processando imagem...</div>`;
+    // Implement pre-validation checks for better memory management
+    // Validate file size before processing - helps prevent OOM errors
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_FILE_SIZE) {
+      imagePreview.innerHTML = '';
+      throw new Error('Imagem muito grande. O tamanho máximo permitido é 10MB.');
+    }
     
-    // Process the image
-    const compressedImage = await processImageForStorage(file);
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      imagePreview.innerHTML = '';
+      throw new Error('Tipo de arquivo não suportado. Use JPG, PNG ou WebP.');
+    }
+    
+    // Process the image with a timeout to prevent UI freezing
+    let processTimeout;
+    const timeoutPromise = new Promise((_, reject) => {
+      processTimeout = setTimeout(() => {
+        reject(new Error('Tempo limite excedido ao processar a imagem. Tente uma imagem menor.'));
+      }, 30000); // 30 second timeout
+    });
+    
+    // Race between processing and timeout
+    const compressedImage = await Promise.race([
+      processImageForStorage(file),
+      timeoutPromise
+    ]).finally(() => {
+      clearTimeout(processTimeout);
+    });
     
     if (compressedImage) {
-      imagePreview.innerHTML = `
-        <div class="image-preview-item">
-          <img src="${compressedImage}" 
-               alt="Preview" 
-               class="preview-image">
-          <button type="button" class="delete-image" onclick="clearOrderImage()">×</button>
-        </div>
-      `;
+      // Clear any previous content
+      imagePreview.innerHTML = '';
+      
+      // Create new preview
+      const previewContainer = document.createElement('div');
+      previewContainer.className = 'image-preview-item';
+      
+      const img = document.createElement('img');
+      img.src = compressedImage;
+      img.alt = 'Preview';
+      img.className = 'preview-image';
+      
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'delete-image';
+      deleteButton.textContent = '×';
+      deleteButton.onclick = function() {
+        clearOrderImage();
+        // Clean up memory after removing image
+        if (img.src.startsWith('blob:')) {
+          URL.revokeObjectURL(img.src);
+        }
+        img.src = '';
+      };
+      
+      previewContainer.appendChild(img);
+      previewContainer.appendChild(deleteButton);
+      imagePreview.appendChild(previewContainer);
     } else {
       imagePreview.innerHTML = '';
       imageError.textContent = 'Erro ao processar a imagem. Tente novamente.';
@@ -188,10 +239,39 @@ export async function handleImageUpload(event) {
     const imageError = document.getElementById('imageError');
     
     if (imagePreview) imagePreview.innerHTML = '';
-    if (imageError) imageError.textContent = 'Erro ao processar a imagem. Verifique o tamanho e formato.';
+    if (imageError) imageError.textContent = error.message || 'Erro ao processar a imagem. Verifique o tamanho e formato.';
   } finally {
     isProcessingImage = false;
+    
+    // Force garbage collection if possible
+    setTimeout(() => {
+      if (window.gc) {
+        try { window.gc(); } catch (e) { /* Ignore errors */ }
+      }
+    }, 500);
   }
+}
+
+/**
+ * Cleanup previous preview elements to prevent memory leaks
+ */
+function cleanupPreviousPreview() {
+  const imagePreview = document.getElementById('imagePreview');
+  if (!imagePreview) return;
+  
+  // Clean up any blob URLs from previous previews
+  const previews = imagePreview.querySelectorAll('img');
+  if (previews && previews.length) {
+    previews.forEach(img => {
+      if (img.src && img.src.startsWith('blob:')) {
+        URL.revokeObjectURL(img.src);
+      }
+      img.src = ''; // Clear the source
+    });
+  }
+  
+  // Clear the HTML
+  imagePreview.innerHTML = '';
 }
 
 // Create debounced version of image upload handler

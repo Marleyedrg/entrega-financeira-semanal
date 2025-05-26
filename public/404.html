@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Redirecionando...</title>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+      color: #333;
+      background-color: #f9fafb;
+    }
+    h1 {
+      color: #16a34a;
+      font-size: 24px;
+      margin-bottom: 16px;
+    }
+    p {
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #16a34a;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 24px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .link {
+      color: #16a34a;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .link:hover {
+      text-decoration: underline;
+    }
+  </style>
+  <script>
+    // Redirect to the main app with clean URL
+    window.onload = function() {
+      // Get the base path for GitHub Pages or local development
+      let basePath = '/';
+      if (window.location.hostname.includes('github.io') || 
+          window.location.pathname.includes('/entrega-financeira-semanal/')) {
+        basePath = '/entrega-financeira-semanal/';
+      }
+      
+      // Redirect after a short delay to show the message
+      setTimeout(function() {
+        window.location.href = basePath;
+      }, 1500);
+    };
+  </script>
+</head>
+<body>
+  <div class="spinner"></div>
+  <h1>Página não encontrada</h1>
+  <p>Redirecionando para a página principal...</p>
+  <p>Se não for redirecionado automaticamente, <a href="/" class="link" id="main-link">clique aqui</a>.</p>
+  
+  <script>
+    // Update the href attribute of the link to use the correct base path
+    document.addEventListener('DOMContentLoaded', function() {
+      const link = document.getElementById('main-link');
+      if (link) {
+        let basePath = '/';
+        if (window.location.hostname.includes('github.io') || 
+            window.location.pathname.includes('/entrega-financeira-semanal/')) {
+          basePath = '/entrega-financeira-semanal/';
+        }
+        link.setAttribute('href', basePath);
+      }
+    });
+  </script>
+</body>
+</html> 

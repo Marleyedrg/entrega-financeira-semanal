@@ -48,10 +48,10 @@
     </style>
 
     <!-- Estilos principais -->
-    <link rel="stylesheet" href="styles/index.css">
-    <link rel="stylesheet" href="styles/modal.css">
-    <link rel="stylesheet" href="styles/diagnostics.css">
-    <link rel="stylesheet" href="styles/sepia-theme.css">
+    <link rel="stylesheet" href="./styles/index.css">
+    <link rel="stylesheet" href="./styles/modal.css">
+    <link rel="stylesheet" href="./styles/diagnostics.css">
+    <link rel="stylesheet" href="./styles/sepia-theme.css">
     
     <!-- Fonte -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -60,6 +60,28 @@
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- GitHub Pages base path detection -->
+    <script type="module">
+        // Define a global variable for the base path
+        window.__APP_BASE_PATH = '/';
+        
+        // Update if we're on GitHub Pages
+        if (window.location.pathname.includes('/entrega-financeira-semanal/')) {
+            window.__APP_BASE_PATH = '/entrega-financeira-semanal/';
+        }
+        
+        // Function to handle loading resources with the correct base path
+        window.getResourcePath = function(path) {
+            if (!path) return path;
+            if (path.startsWith('http') || path.startsWith('//') || path.startsWith('data:')) return path;
+            
+            const basePath = window.__APP_BASE_PATH;
+            // Remove leading slash if exists to avoid double slashes
+            const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+            return basePath + cleanPath;
+        };
+    </script>
 </head>
 <body>
     <!-- Tela de carregamento -->
@@ -117,9 +139,14 @@
                     </div>
                     <div class="form-group">
                         <label for="image" class="required">Comprovante</label>
-                        <input type="file" id="image" accept="image/jpeg,image/png,image/webp" class="hidden">
+                        <input type="file" 
+                               id="image" 
+                               accept="image/jpeg,image/png,image/webp" 
+                               class="hidden"
+                               data-mobile-optimize="true">
                         <button type="button" id="uploadButton" class="button outline">
-                            Carregar imagem
+                            <i class="fas fa-camera"></i>
+                            <span>Carregar imagem</span>
                         </button>
                         <div class="error-message" id="imageError"></div>
                         <div id="imagePreview" class="image-preview-container">
@@ -301,13 +328,18 @@
                 </div>
                 <div class="form-group">
                     <label for="editImage" class="required">Comprovante</label>
-                    <input type="file" id="editImage" accept="image/jpeg,image/png,image/webp" class="hidden" multiple>
+                    <input type="file" 
+                           id="editImage" 
+                           accept="image/jpeg,image/png,image/webp" 
+                           class="hidden" 
+                           data-mobile-optimize="true">
                     <button type="button" id="editUploadButton" class="button outline">
-                        Adicionar imagem
+                        <i class="fas fa-camera"></i>
+                        <span>Carregar imagem</span>
                     </button>
                     <div class="error-message" id="editImageError"></div>
                     <div id="editImagePreview" class="image-preview-container">
-                        <!-- Images will be displayed here -->
+                        <!-- O preview da imagem será exibido aqui -->
                     </div>
                 </div>
                 <div class="modal-actions">
@@ -426,11 +458,18 @@
             const loadingScreen = document.querySelector('.loading-screen');
             const container = document.querySelector('.container');
             
+            if (!loadingScreen) {
+                console.log('Loading screen already removed');
+                return;
+            }
+            
             loadingScreen.classList.add('fade-out');
-            container.classList.add('loaded');
+            if (container) container.classList.add('loaded');
             
             setTimeout(() => {
-                loadingScreen.style.display = 'none';
+                if (loadingScreen && loadingScreen.style) {
+                    loadingScreen.style.display = 'none';
+                }
             }, 300);
         }
 

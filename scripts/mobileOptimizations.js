@@ -5,11 +5,31 @@
  * applied throughout the application.
  */
 
-// Core mobile functionality
-export { 
-  isMobileDevice,
-  setupMobileOptimizations
+// Import directly from mobile.js to avoid scope issues
+import { 
+  setupMobileOptimizations,
+  cleanupUnusedResources,
+  applyMemoryOptimizations,
+  fixFileInputIssues
 } from './mobile.js';
+
+// Re-export the functions from mobile.js
+export { 
+  setupMobileOptimizations,
+  cleanupUnusedResources,
+  applyMemoryOptimizations,
+  fixFileInputIssues
+};
+
+// Define isMobileDevice directly to avoid circular dependency
+/**
+ * Check if device is mobile
+ * @returns {boolean} True if mobile device
+ */
+export function isMobileDevice() {
+  return window.innerWidth <= 768 || 
+    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
 
 // Image optimizations for mobile
 export {
@@ -18,6 +38,14 @@ export {
   formatImageDisplay,
   showImageModal
 } from './imageUtils.js';
+
+// Advanced image optimization for mobile
+import {
+  hasEnoughMemory,
+  optimizeForLowMemory,
+  downsampleStoredImages,
+  detectAndRecoverFromMemoryIssues
+} from './imageOptimizer.js';
 
 // Chart optimizations for mobile
 export {
@@ -33,13 +61,26 @@ export {
 // Mobile specific optimizations
 import { showToast } from './utils.js';
 
+// Re-export needed functions from imageOptimizer.js, but avoid duplicate exports
+export { hasEnoughMemory, optimizeForLowMemory, downsampleStoredImages };
+
+// Explicitly re-export detectAndRecoverFromMemoryIssues to avoid duplicate export
+// by using a new name for our import
+const { detectAndRecoverFromMemoryIssues: recoverMemory } = { detectAndRecoverFromMemoryIssues };
+export { recoverMemory as detectAndRecoverFromMemoryIssues };
+
 /**
  * Run all additional memory optimizations for mobile devices
  */
-export function applyMemoryOptimizations() {
+export function applyAdvancedMemoryOptimizations() {
   // Apply memory-related optimizations
   setupImageCleanupRoutine();
   optimizeMemoryUsage();
+  
+  // Add periodic memory check for mobile devices
+  if (isMobileDevice()) {
+    setupPeriodicMemoryCheck();
+  }
 }
 
 /**
@@ -60,44 +101,33 @@ function setupImageCleanupRoutine() {
       cleanupUnusedResources();
     }, 300);
   });
+  
+  // Monitor back button for cleanup
+  window.addEventListener('popstate', () => {
+    cleanupUnusedResources();
+  });
 }
 
 /**
- * Clean up unused resources to optimize memory usage
+ * Setup periodic memory checks to prevent out of memory errors
  */
-export function cleanupUnusedResources() {
-  try {
-    // Clear any object URLs that might be hanging around
-    const images = document.querySelectorAll('img[src^="blob:"]');
-    images.forEach(img => {
-      if (img.src.startsWith('blob:')) {
-        URL.revokeObjectURL(img.src);
-      }
-    });
-
-    // Clean up any unused canvas elements
-    const canvases = document.querySelectorAll('canvas');
-    canvases.forEach(canvas => {
-      if (!document.body.contains(canvas)) {
-        canvas.width = 0;
-        canvas.height = 0;
-      }
-    });
-
-    // Force browser to free memory if possible
-    if (window.gc) {
-      try {
-        window.gc();
-      } catch (e) {
-        console.log('Garbage collection not available');
+function setupPeriodicMemoryCheck() {
+  // Check memory status every 30 seconds
+  const memoryCheckInterval = setInterval(() => {
+    // Only run check if page is visible
+    if (document.visibilityState === 'visible') {
+      // Check if memory is running low
+      if (!hasEnoughMemory()) {
+        // Attempt recovery
+        detectAndRecoverFromMemoryIssues();
       }
     }
-    
-    return true;
-  } catch (error) {
-    console.error('Error cleaning up resources:', error);
-    return false;
-  }
+  }, 30000);
+  
+  // Clear interval when page is unloaded
+  window.addEventListener('beforeunload', () => {
+    clearInterval(memoryCheckInterval);
+  });
 }
 
 /**
@@ -140,39 +170,26 @@ function optimizeMemoryUsage() {
 
   // Setup cleanup for preview containers
   setupPreviewContainerCleanup();
-}
-
-/**
- * Fix issues with image file inputs on various browsers
- */
-export function fixFileInputIssues() {
-  // Find all file inputs
-  const fileInputs = document.querySelectorAll('input[type="file"]');
   
-  fileInputs.forEach(input => {
-    // Create a new input element to replace the old one
-    const newInput = input.cloneNode(false);
-    
-    // Remove capture attribute that can cause issues on some mobile browsers
-    newInput.removeAttribute('capture');
-    
-    // Ensure multiple is set correctly
-    if (newInput.hasAttribute('multiple')) {
-      newInput.setAttribute('multiple', 'multiple');
-    } else {
-      newInput.setAttribute('multiple', 'false');
-    }
-    
-    // Replace the old input with the new one
-    if (input.parentNode) {
-      input.parentNode.replaceChild(newInput, input);
-    }
-  });
+  // Optimize existing stored images on startup for mobile
+  if (isMobileDevice()) {
+    // Delay to not interfere with initial page load
+    setTimeout(() => {
+      // Check if memory is low before optimizing
+      if (!hasEnoughMemory()) {
+        downsampleStoredImages();
+      }
+    }, 5000);
+  }
 }
 
-// Default export 
+// Export additional optimization functions
 export default {
-  applyMemoryOptimizations,
-  cleanupUnusedResources,
-  fixFileInputIssues
+  applyAdvancedMemoryOptimizations,
+  cleanupUnusedResources, // This is now properly in scope as it's directly imported
+  fixFileInputIssues,
+  hasEnoughMemory,
+  optimizeForLowMemory,
+  downsampleStoredImages,
+  detectAndRecoverFromMemoryIssues: recoverMemory
 }; 

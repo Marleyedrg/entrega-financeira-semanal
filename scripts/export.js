@@ -2,6 +2,8 @@ import { deliveries, gasEntries, loadDeliveries, loadGasEntries, updateTotals } 
 import { formatDate, getCurrentDate, showToast } from './utils.js';
 import { generateDeliveryIdentifiers } from './idGenerator.js';
 import { optimizeStoredImages, formatImageDisplay } from './imageUtils.js';
+import { renderAnalytics, clearDataCache } from './analytics.js';
+import { forceSyncAllTabs } from './sync.js';
 
 // Função para validar dados antes da exportação
 function validateExportData(data, type) {
@@ -132,20 +134,61 @@ export function clearAllData() {
   }
   
   try {
-    // Limpar dados diretamente, sem criar backup
-    localStorage.clear();
-    deliveries.length = 0;
-    gasEntries.length = 0;
-    
-    loadDeliveries();
-    loadGasEntries();
-    updateTotals();
+    // Perform complete data cleanup - clearing all browser storage
+    performCompleteDataCleanup();
     
     showToast('Todos os dados foram limpos com sucesso!', 'success');
   } catch (error) {
     console.error('Erro ao limpar dados:', error);
     showToast(error.message, 'error');
   }
+}
+
+/**
+ * Performs a complete data cleanup, removing all data from browser storage
+ * and resetting application state
+ */
+function performCompleteDataCleanup() {
+  // Clear localStorage
+  localStorage.clear();
+  
+  // Clear sessionStorage
+  sessionStorage.clear();
+  
+  // Reset in-memory arrays
+  deliveries.length = 0;
+  gasEntries.length = 0;
+  
+  // Clear analytics cache
+  clearDataCache();
+  
+  // Clear any broadcast channels
+  try {
+    const syncChannel = new BroadcastChannel('entrega_financeira_sync');
+    syncChannel.postMessage({
+      type: 'FULL_CLEAR',
+      timestamp: Date.now()
+    });
+    syncChannel.close();
+  } catch (e) {
+    console.log('BroadcastChannel não disponível para limpeza');
+  }
+  
+  // Force cleanup of any object URLs
+  const images = document.querySelectorAll('img[src^="blob:"]');
+  images.forEach(img => {
+    if (img.src.startsWith('blob:')) {
+      URL.revokeObjectURL(img.src);
+    }
+  });
+  
+  // Reload data (which will now be empty)
+  loadDeliveries();
+  loadGasEntries();
+  updateTotals();
+  
+  // Force tab sync
+  forceSyncAllTabs();
 }
 
 // Função para finalizar a semana
@@ -174,15 +217,8 @@ export function finishWeek() {
     
     // Função para limpar dados após o download
     const clearDataAfterExport = () => {
-      // Limpar os dados
-      localStorage.clear();
-      deliveries.length = 0;
-      gasEntries.length = 0;
-      
-      // Recarregar dados
-      loadDeliveries();
-      loadGasEntries();
-      updateTotals();
+      // Perform complete data cleanup
+      performCompleteDataCleanup();
       
       showToast('Semana finalizada com sucesso!', 'success');
     };
@@ -238,9 +274,6 @@ export function finishWeek() {
         }
       }, 300);
     }
-    
-    // Otimizar imagens armazenadas
-    optimizeStoredImages();
   } catch (error) {
     console.error('Erro ao finalizar semana:', error);
     showToast(error.message, 'error');
