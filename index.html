@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#16a34a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Sistema de Entregas</title>
+    
+    <!-- Estilos críticos inline para garantir carregamento inicial -->
+    <style>
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease-out;
+        }
+        .loading-screen.fade-out {
+            opacity: 0;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #16a34a;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .container {
+            opacity: 0;
+            transition: opacity 0.3s ease-in;
+        }
+        .container.loaded {
+            opacity: 1;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+
+    <!-- Estilos principais -->
+    
+    <!-- Fonte -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- GitHub Pages base path detection -->
+  <script type="module" crossorigin src="/entrega-financeira-semanal/assets/index.CiUHYS5-.js"></script>
+  <link rel="stylesheet" crossorigin href="/entrega-financeira-semanal/assets/index.B-1rLqz5.css">
+</head>
+<body>
+    <!-- Tela de carregamento -->
+    <div class="loading-screen">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Registro de Entregas</h1>
+            <div class="totals">
+                <div class="total">
+                    <span class="total-label">Taxa</span>
+                    <span class="total-value">R$ <span id="totalFees">0.00</span></span>
+                </div>
+                <div class="total">
+                    <span class="total-label">Gasolina</span>
+                    <span class="total-value">R$ <span id="totalGas">0.00</span></span>
+                </div>
+                <div class="total">
+                    <span class="total-label">Lucro</span>
+                    <span class="total-value">R$ <span id="netProfit">0.00</span></span>
+                </div>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="register">Registro</button>
+            <button class="tab-button" data-tab="gas">Gasolina</button>
+            <button class="tab-button" data-tab="analytics">Análise</button>
+        </div>
+
+        <div id="register" class="tab-content active">
+            <form id="deliveryForm" class="form-container">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="orderNumber">Número do Pedido *</label>
+                        <input type="text" id="orderNumber" required placeholder="Digite o número do pedido" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="fee">Taxa de Entrega</label>
+                        <input 
+                            type="number" 
+                            id="fee" 
+                            step="0.01" 
+                            min="0" 
+                            placeholder="0.00"
+                            inputmode="decimal" 
+                            autocomplete="off"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="date">Data</label>
+                        <input type="date" id="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="image" class="required">Comprovante</label>
+                        <input type="file" 
+                               id="image" 
+                               accept="image/jpeg,image/png,image/webp" 
+                               class="hidden"
+                               data-mobile-optimize="true">
+                        <button type="button" id="uploadButton" class="button outline">
+                            <i class="fas fa-camera"></i>
+                            <span>Carregar imagem</span>
+                        </button>
+                        <div class="error-message" id="imageError"></div>
+                        <div id="imagePreview" class="image-preview-container">
+                            <!-- O preview da imagem será exibido aqui -->
+                        </div>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button type="submit" class="button primary">Registrar Pedido</button>
+                </div>
+            </form>
+
+            <div class="actions-container">
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Buscar por número do pedido..." autocomplete="off">
+                </div>
+                <div class="import-export">
+                    <input type="file" id="csvInput" accept=".csv,text/csv,text/comma-separated-values,application/csv,application/excel,application/vnd.ms-excel,application/vnd.msexcel,text/anytext,text/plain">
+                    <button id="importButton" class="button outline">Importar</button>
+                    <button id="finishWeekButton" class="button primary">Finalizar e Limpar</button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="deliveriesTable">
+                    <thead>
+                        <tr>
+                            <th>Número do Pedido</th>
+                            <th>Valor</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deliveriesTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="gas" class="tab-content">
+            <form id="gasForm" class="form-container">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="gasDate">Data do Abastecimento:</label>
+                        <input type="date" id="gasDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="gasAmount">Valor (R$):</label>
+                        <input type="number" id="gasAmount" step="0.01" min="0" required>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button type="submit" class="button primary">Registrar Abastecimento</button>
+                </div>
+            </form>
+
+            <div class="actions-container">
+                <div class="search-container">
+                    <input type="text" id="gasSearchInput" placeholder="Buscar por posto..." autocomplete="off">
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="gasTable">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Valor</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gasTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="analytics" class="tab-content">
+            <div class="analytics-header">
+                <h2>Análise de Dados</h2>
+            </div>
+            
+            <div class="analytics-dashboard">
+                <!-- Resumo Financeiro -->
+                <div class="analytics-card">
+                    <h3>Resumo Financeiro</h3>
+                    <div class="summary-container" id="financialSummary">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
+
+                <!-- Gráfico de Pizza - Relação Gastos/Ganhos -->
+                <div class="analytics-card">
+                    <h3>Relação Gastos/Ganhos</h3>
+                    <div class="summary-container" id="revenueExpenseChart">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
+
+                <!-- Relação Gastos/Pedidos por Dia -->
+                <div class="analytics-card">
+                    <h3>Relação Gastos/Pedidos por Dia</h3>
+                    <div class="summary-container" id="expenseDeliveryRatio">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
+
+                <!-- Relação Gastos/Ganhos por Dia -->
+                <div class="analytics-card">
+                    <h3>Relação Gastos/Ganhos por Dia</h3>
+                    <div class="summary-container" id="expenseIncomeRatio">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
+
+                <!-- Métricas de Desempenho -->
+                <div class="analytics-card">
+                    <h3>Métricas de Desempenho</h3>
+                    <div class="summary-container" id="performanceMetrics">
+                        <p class="empty-state">Nenhum dado cadastrado</p>
+                    </div>
+                </div>
+
+                <!-- Melhor e Pior Dia - Grid Layout -->
+                <div class="analytics-card-group">
+                    <!-- Melhor Dia -->
+                    <div class="analytics-card">
+                        <h3>Melhor Dia</h3>
+                        <div class="summary-container" id="bestDay">
+                            <p class="empty-state">Nenhum dado cadastrado</p>
+                        </div>
+                    </div>
+
+                    <!-- Pior Dia -->
+                    <div class="analytics-card">
+                        <h3>Pior Dia</h3>
+                        <div class="summary-container" id="worstDay">
+                            <p class="empty-state">Nenhum dado cadastrado</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para visualização de imagem em alta resolução -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <img id="modalImage" alt="Comprovante em alta resolução">
+        </div>
+        <div class="zoom-controls">
+            <button id="zoomOut" title="Reduzir zoom">-</button>
+            <span class="zoom-level">100%</span>
+            <button id="zoomIn" title="Aumentar zoom">+</button>
+        </div>
+    </div>
+
+    <!-- Modal de edição -->
+    <div class="modal-overlay" id="editModal">
+        <div class="edit-modal">
+            <h2>Editar Pedido</h2>
+            <form id="editForm" class="edit-form">
+                <div class="form-group">
+                    <label for="editOrderNumber" class="required">Número do Pedido</label>
+                    <input type="text" id="editOrderNumber" required>
+                    <div class="error-message" id="editOrderNumberError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="editFee">Taxa de Entrega</label>
+                    <input type="number" id="editFee" step="0.01">
+                </div>
+                <div class="form-group checkbox-group" id="editStatusGroup">
+                    <input type="checkbox" id="editStatus">
+                    <label for="editStatus">Marcar como pendente mesmo com taxa</label>
+                </div>
+                <div class="form-group">
+                    <label for="editDate" class="required">Data</label>
+                    <input type="date" id="editDate" required>
+                    <div class="error-message" id="editDateError"></div>
+                </div>
+                <div class="form-group">
+                    <label for="editImage" class="required">Comprovante</label>
+                    <input type="file" 
+                           id="editImage" 
+                           accept="image/jpeg,image/png,image/webp" 
+                           class="hidden" 
+                           data-mobile-optimize="true">
+                    <button type="button" id="editUploadButton" class="button outline">
+                        <i class="fas fa-camera"></i>
+                        <span>Carregar imagem</span>
+                    </button>
+                    <div class="error-message" id="editImageError"></div>
+                    <div id="editImagePreview" class="image-preview-container">
+                        <!-- O preview da imagem será exibido aqui -->
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" id="cancelEdit">Cancelar</button>
+                    <button type="submit" class="btn-update">Atualizar Pedido</button>
+                </div>
+            </form>
+        </div>
+        <div class="unsaved-changes" id="unsavedChangesNotice">
+            Existem alterações não salvas. Tem certeza que deseja sair?
+        </div>
+    </div>
+
+    <!-- Rodapé com opção de limpeza de dados -->
+    <footer class="footer">
+        <div class="footer-buttons">
+            <button id="exportButton" class="button outline">
+                <i class="fas fa-file-export"></i>
+                Exportar
+            </button>
+            <button id="diagnosticButton" class="button outline">
+                <i class="fas fa-stethoscope diagnostic-icon"></i>
+                Diagnóstico de Dados
+            </button>
+            <button id="clearDataButton" class="button outline danger">Limpar Todos os Dados</button>
+        </div>
+        <p class="footer-warning">Esta ação não pode ser desfeita. Certifique-se de exportar seus dados antes de limpar.</p>
+    </footer>
+    
+    <!-- Modal para exportação personalizada -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="edit-modal">
+            <h2>Exportar Dados CSV</h2>
+            <div class="export-options">
+                <div class="form-group checkbox-group" id="exportDeliveriesGroup">
+                    <input type="checkbox" id="exportDeliveries" checked>
+                    <label for="exportDeliveries">Incluir entregas</label>
+                </div>
+                <div class="form-group checkbox-group" id="exportGasGroup">
+                    <input type="checkbox" id="exportGas" checked>
+                    <label for="exportGas">Incluir abastecimentos</label>
+                </div>
+                <div class="form-group checkbox-group" id="exportImagesGroup">
+                    <input type="checkbox" id="exportImages" checked>
+                    <label for="exportImages">Incluir imagens</label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="cancelExport">Cancelar</button>
+                <button type="button" class="btn-update" id="confirmExport">Exportar</button>
+            </div>
+            <div class="export-actions-separator">
+                <div class="separator-line"></div>
+                <span>ou</span>
+                <div class="separator-line"></div>
+            </div>
+            <div class="export-images-only">
+                <button type="button" class="btn-secondary" id="exportOnlyImages">
+                    <i class="fas fa-images"></i>
+                    Exportar Somente Imagens
+                </button>
+                <p class="export-help-text">Faça download de todas as imagens como um arquivo ZIP</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para confirmação de exclusão -->
+    <div class="modal-overlay" id="deleteConfirmModal">
+        <div class="edit-modal">
+            <h2>Confirmar Exclusão</h2>
+            <div class="delete-confirm-content">
+                <p id="deleteConfirmMessage">Para confirmar a exclusão, digite o número do pedido abaixo:</p>
+                <div class="form-group">
+                    <input type="text" id="deleteConfirmInput" placeholder="Digite para confirmar">
+                    <div class="error-message" id="deleteConfirmError"></div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="cancelDelete">Cancelar</button>
+                <button type="button" class="btn-update danger" id="confirmDelete">Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para opções de exportação de imagens -->
+    <div class="modal-overlay" id="imagesExportModal">
+        <div class="edit-modal">
+            <h2>Exportar Imagens</h2>
+            <div class="export-options">
+                <div class="form-group checkbox-group" id="exportDeliveryImagesGroup">
+                    <input type="checkbox" id="exportDeliveryImages" checked>
+                    <label for="exportDeliveryImages">Incluir imagens de entregas</label>
+                </div>
+                <div class="form-group checkbox-group" id="exportGasImagesGroup">
+                    <input type="checkbox" id="exportGasImages" checked>
+                    <label for="exportGasImages">Incluir imagens de abastecimentos</label>
+                </div>
+            </div>
+            <div class="export-info">
+                <p class="export-help-text">As imagens serão exportadas como um arquivo ZIP para download</p>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" id="cancelImagesExport">Cancelar</button>
+                <button type="button" class="btn-update" id="confirmImagesExport">Exportar Imagens</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    
+    <!-- Script para gerenciar o carregamento -->
+    <script>
+        // Função para remover a tela de carregamento
+        function hideLoadingScreen() {
+            const loadingScreen = document.querySelector('.loading-screen');
+            const container = document.querySelector('.container');
+            
+            if (!loadingScreen) {
+                console.log('Loading screen already removed');
+                return;
+            }
+            
+            loadingScreen.classList.add('fade-out');
+            if (container) container.classList.add('loaded');
+            
+            setTimeout(() => {
+                if (loadingScreen && loadingScreen.style) {
+                    loadingScreen.style.display = 'none';
+                }
+            }, 300);
+        }
+
+        // Evento para quando todos os recursos estiverem carregados
+        window.addEventListener('load', () => {
+            // Pequeno delay para garantir que tudo esteja renderizado
+            setTimeout(hideLoadingScreen, 500);
+        });
+
+        // Fallback caso o evento load não dispare
+        setTimeout(hideLoadingScreen, 2000);
+    </script>
+
+</body>
+</html>
