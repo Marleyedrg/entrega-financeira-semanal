@@ -70,6 +70,21 @@ export async function handleOrderFormSubmit(event) {
     renderAnalytics();
     
     showToast('Pedido registrado com sucesso!', 'success');
+    
+    // Reload the page after a short delay to allow the toast to be seen and data to be saved
+    setTimeout(() => {
+      // Verify that data was saved before reloading
+      const savedDeliveries = JSON.parse(localStorage.getItem('deliveries') || '[]');
+      const hasNewOrder = savedDeliveries.some(d => d.orderNumber === orderNumber && d.date === date);
+      
+      if (hasNewOrder) {
+        console.log('New order saved successfully, reloading page...');
+        window.location.reload();
+      } else {
+        console.warn('Order may not have been saved yet, waiting a bit longer...');
+        setTimeout(() => window.location.reload(), 500);
+      }
+    }, 1000);
   } catch (error) {
     console.error('Erro ao criar pedido:', error);
     showToast(error.message, 'error');

@@ -162,6 +162,9 @@ function performCompleteDataCleanup() {
   // Clear analytics cache
   clearDataCache();
   
+  // Clear any form inputs and image previews
+  clearFormInputs();
+  
   // Clear any broadcast channels
   try {
     const syncChannel = new BroadcastChannel('entrega_financeira_sync');
@@ -221,6 +224,21 @@ export function finishWeek() {
       performCompleteDataCleanup();
       
       showToast('Semana finalizada com sucesso!', 'success');
+      
+      // Reload the page to ensure all information is cleaned from the UI
+      setTimeout(() => {
+        // Verify that data was cleared before reloading
+        const hasLocalStorageData = localStorage.getItem('deliveries') || localStorage.getItem('gasEntries');
+        
+        if (hasLocalStorageData) {
+          console.warn('Data may not have been fully cleared, attempting one more cleanup...');
+          performCompleteDataCleanup();
+          setTimeout(() => window.location.reload(), 500);
+        } else {
+          console.log('Data cleared successfully, reloading page...');
+          window.location.reload();
+        }
+      }, 1500);
     };
     
     if (isMobileDevice) {
@@ -940,4 +958,77 @@ export function showImagesExportModal() {
   modal.addEventListener('click', () => {
     modal.style.display = 'none';
   });
+}
+
+/**
+ * Clears all form inputs and image previews in the application
+ */
+function clearFormInputs() {
+  try {
+    // Clear delivery form
+    const orderForm = document.getElementById('deliveryForm');
+    if (orderForm) orderForm.reset();
+    
+    // Set date fields to current date
+    const dateFields = ['date', 'gasDate'];
+    const currentDate = getCurrentDate();
+    dateFields.forEach(fieldId => {
+      const field = document.getElementById(fieldId);
+      if (field) field.value = currentDate;
+    });
+    
+    // Clear image previews
+    const imagePreviews = ['imagePreview', 'editImagePreview'];
+    imagePreviews.forEach(previewId => {
+      const preview = document.getElementById(previewId);
+      if (preview) preview.innerHTML = '';
+    });
+    
+    // Clear any error messages
+    const errorMessages = document.querySelectorAll('.error-message');
+    errorMessages.forEach(error => {
+      error.textContent = '';
+    });
+    
+    // Clear table bodies
+    const tableBodies = ['deliveriesTableBody', 'gasTableBody'];
+    tableBodies.forEach(tableId => {
+      const table = document.getElementById(tableId);
+      if (table) table.innerHTML = '';
+    });
+    
+    // Reset totals
+    const totalElements = ['totalFees', 'totalGas', 'netProfit'];
+    totalElements.forEach(elementId => {
+      const element = document.getElementById(elementId);
+      if (element) element.textContent = '0.00';
+    });
+    
+    // Clear search inputs
+    const searchInputs = ['searchInput', 'gasSearchInput'];
+    searchInputs.forEach(inputId => {
+      const input = document.getElementById(inputId);
+      if (input) input.value = '';
+    });
+    
+    // Clear analytics section
+    const analyticsSections = [
+      'financialSummary',
+      'revenueExpenseChart',
+      'expenseDeliveryRatio',
+      'expenseIncomeRatio',
+      'performanceMetrics',
+      'bestDay',
+      'worstDay'
+    ];
+    
+    analyticsSections.forEach(sectionId => {
+      const section = document.getElementById(sectionId);
+      if (section) section.innerHTML = '<p class="empty-state">Nenhum dado cadastrado</p>';
+    });
+    
+    console.log('All form inputs and UI elements cleared successfully');
+  } catch (error) {
+    console.error('Error clearing form inputs:', error);
+  }
 } 
