@@ -87,7 +87,7 @@ export async function handleOrderFormSubmit(event) {
  * Manipula o envio do formulário de gastos
  * @param {Event} event - Evento de submit do formulário
  */
-export function handleGasFormSubmit(event) {
+export async function handleGasFormSubmit(event) {
   event.preventDefault();
   
   const amount = document.getElementById('gasAmount').value.trim();
@@ -111,6 +111,16 @@ export function handleGasFormSubmit(event) {
     // Adiciona ao array e salva
     gasEntries.push(newEntry);
     saveGasEntries();
+    
+    // Explicitly update bills budget calculator
+    console.log('🔄 Calling budget update after gas entry added');
+    try {
+      const { updateBudgetFromGasChanges } = await import('./billsManager.js');
+      updateBudgetFromGasChanges();
+      console.log('✅ Budget update called successfully');
+    } catch (error) {
+      console.log('⚠️ Could not update budget:', error);
+    }
     
     // Clear form but preserve the date intelligently
     event.target.reset();

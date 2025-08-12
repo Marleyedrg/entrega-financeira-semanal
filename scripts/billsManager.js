@@ -1,6 +1,5 @@
 // Bills Manager - Manages fixed bills and calculates daily budget
 import { showToast } from './utils.js';
-import { gasEntries } from './data.js';
 
 // Bills data storage
 export let bills = [];
@@ -245,9 +244,17 @@ function getDueDateClass(dueDate) {
  * Updates the budget calculator display
  */
 function updateBudgetCalculator() {
+  console.log('🔄 updateBudgetCalculator called');
+  
   const totalBillsElement = document.getElementById('totalBills');
   const dailyBudgetElement = document.getElementById('dailyBudget');
   const daysInMonthElement = document.getElementById('daysInMonth');
+  
+  // Check if bills tab elements are available
+  if (!totalBillsElement && !dailyBudgetElement) {
+    console.log('⚠️ Bills tab elements not found, budget calculation skipped');
+    return;
+  }
   
   // Calculate total bills
   const totalBills = bills.reduce((sum, bill) => sum + bill.amount, 0);
@@ -257,6 +264,16 @@ function updateBudgetCalculator() {
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  
+  // Get current gas entries from localStorage to ensure we have the latest data
+  let gasEntries = [];
+  try {
+    const storedGasEntries = localStorage.getItem('gasEntries');
+    gasEntries = storedGasEntries ? JSON.parse(storedGasEntries) : [];
+  } catch (error) {
+    console.warn('Error loading gas entries for budget calculation:', error);
+    gasEntries = [];
+  }
   
   // Calculate total daily expenses from current month's gas entries
   const currentMonthGasEntries = gasEntries.filter(entry => {
@@ -322,7 +339,36 @@ function updateBudgetCalculator() {
     `;
   }
   
-  console.log(`Budget calculated: Income R$${monthlyIncome}, Bills R$${totalBills}, Monthly Expenses R$${totalMonthlyExpenses.toFixed(2)}, Adjusted Daily Budget R$${displayBudget.toFixed(2)}`);
+  console.log(`💰 Budget calculated: Income R$${monthlyIncome}, Bills R$${totalBills}, Monthly Expenses R$${totalMonthlyExpenses.toFixed(2)} (${currentMonthGasEntries.length} entries), Adjusted Daily Budget R$${displayBudget.toFixed(2)}`);
+  
+  // Force update of elements even if they weren't found initially
+  setTimeout(() => {
+    const delayedTotalBillsElement = document.getElementById('totalBills');
+    const delayedDailyBudgetElement = document.getElementById('dailyBudget');
+    const delayedMonthlyExpensesElement = document.getElementById('monthlyExpenses');
+    const delayedExpensesCountElement = document.getElementById('expensesCount');
+    
+    if (delayedTotalBillsElement && !totalBillsElement) {
+      delayedTotalBillsElement.textContent = totalBills.toFixed(2);
+      console.log('✅ Updated total bills element (delayed)');
+    }
+    
+    if (delayedDailyBudgetElement && !dailyBudgetElement) {
+      const displayBudget = adjustedDailyBudget > 0 ? adjustedDailyBudget : dailyBudget;
+      delayedDailyBudgetElement.textContent = displayBudget.toFixed(2);
+      console.log('✅ Updated daily budget element (delayed)');
+    }
+    
+    if (delayedMonthlyExpensesElement && !monthlyExpensesElement) {
+      delayedMonthlyExpensesElement.textContent = totalMonthlyExpenses.toFixed(2);
+      console.log('✅ Updated monthly expenses element (delayed)');
+    }
+    
+    if (delayedExpensesCountElement && !expensesCountElement) {
+      delayedExpensesCountElement.textContent = currentMonthGasEntries.length;
+      console.log('✅ Updated expenses count element (delayed)');
+    }
+  }, 100);
 }
 
 /**
@@ -415,8 +461,9 @@ export function clearAllBills() {
  * This function is called from the gas management system
  */
 export function updateBudgetFromGasChanges() {
+  console.log('🔄 updateBudgetFromGasChanges called');
   updateBudgetCalculator();
-  console.log('Budget updated due to gas entries changes');
+  console.log('✅ Budget updated due to gas entries changes');
 }
 
 // Make functions available globally for onclick handlers

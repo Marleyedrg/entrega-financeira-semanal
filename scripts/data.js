@@ -196,12 +196,13 @@ export function saveGasEntries() {
  * Updates the bills budget calculator when gas entries change
  */
 async function updateBillsBudgetCalculator() {
+  console.log('🔄 updateBillsBudgetCalculator called from data.js');
   try {
     const { updateBudgetFromGasChanges } = await import('./billsManager.js');
     updateBudgetFromGasChanges();
   } catch (error) {
     // Bills module may not be loaded yet, that's okay
-    console.log('Bills module not available for budget update');
+    console.log('⚠️ Bills module not available for budget update:', error);
   }
 }
 
@@ -524,6 +525,11 @@ export function deleteGasEntry(id) {
   try {
     gasEntries = gasEntries.filter(entry => entry.id !== id);
     saveGasEntries();
+    
+    // Explicitly update budget calculator after deletion
+    console.log('🔄 Calling budget update after gas entry deleted');
+    updateBillsBudgetCalculator();
+    
     updateGasTable();
     updateTotals();
     showToast('Registro de gasolina excluído com sucesso', 'success');
