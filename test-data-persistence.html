@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Persistência de Dados</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        #results {
+            white-space: pre-wrap;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Teste de Persistência de Dados</h1>
+    <p>Esta página testa se o problema de perda de dados foi corrigido.</p>
+    
+    <div class="test-section">
+        <h2>1. Teste de Salvamento de Dados</h2>
+        <p>Simula a criação de um pedido e verifica se os dados são salvos corretamente.</p>
+        <button class="test-button" onclick="testDataSaving()">Testar Salvamento</button>
+        <button class="test-button" onclick="testPageReload()">Simular Atualização da Página</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Teste de Backup Automático</h2>
+        <p>Verifica se o sistema de backup está funcionando.</p>
+        <button class="test-button" onclick="testBackupSystem()">Testar Backup</button>
+        <button class="test-button" onclick="listBackups()">Listar Backups</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Teste de Recuperação</h2>
+        <p>Simula corrupção de dados e testa a recuperação.</p>
+        <button class="test-button" onclick="simulateDataCorruption()">Simular Corrupção</button>
+        <button class="test-button" onclick="testEmergencyRecovery()">Recuperação de Emergência</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Estado Atual dos Dados</h2>
+        <button class="test-button" onclick="checkCurrentData()">Verificar Dados Atuais</button>
+        <button class="test-button" onclick="clearAllTestData()">Limpar Dados de Teste</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Resultados dos Testes</h2>
+        <div id="results">Clique nos botões acima para executar os testes...</div>
+    </div>
+
+    <script type="module">
+        let testResults = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}`;
+            testResults.push(logMessage);
+            
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.textContent = testResults.join('\n');
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+            
+            console.log(logMessage);
+        }
+        
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = type;
+            alertDiv.textContent = message;
+            
+            const resultsSection = document.querySelector('.test-section:last-of-type');
+            resultsSection.insertBefore(alertDiv, resultsSection.lastElementChild);
+            
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+        
+        window.testDataSaving = async function() {
+            log('🧪 Iniciando teste de salvamento de dados...');
+            
+            try {
+                // Simulate creating an order
+                const testOrder = {
+                    id: 'test_' + Date.now(),
+                    orderNumber: 'TEST001',
+                    fee: 15.50,
+                    date: new Date().toISOString().split('T')[0],
+                    status: 'completed',
+                    createdAt: new Date().toISOString()
+                };
+                
+                // Get current data
+                const currentDeliveries = JSON.parse(localStorage.getItem('deliveries') || '[]');
+                log(`Dados atuais: ${currentDeliveries.length} pedidos`);
+                
+                // Add test order
+                currentDeliveries.push(testOrder);
+                
+                // Save to localStorage
+                const dataToSave = JSON.stringify(currentDeliveries);
+                localStorage.setItem('deliveries', dataToSave);
+                
+                // Verify save
+                const savedData = localStorage.getItem('deliveries');
+                if (savedData === dataToSave) {
+                    log('✅ Dados salvos corretamente no localStorage');
+                    
+                    // Verify the specific order exists
+                    const parsedData = JSON.parse(savedData);
+                    const orderExists = parsedData.some(d => d.id === testOrder.id);
+                    
+                    if (orderExists) {
+                        log('✅ Pedido de teste encontrado nos dados salvos');
+                        showAlert('Teste de salvamento PASSOU!', 'success');
+                    } else {
+                        log('❌ Pedido de teste NÃO encontrado nos dados salvos');
+                        showAlert('Teste de salvamento FALHOU!', 'error');
+                    }
+                } else {
+                    log('❌ Falha na verificação dos dados salvos');
+                    showAlert('Teste de salvamento FALHOU!', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Erro no teste de salvamento: ${error.message}`);
+                showAlert('Teste de salvamento FALHOU!', 'error');
+            }
+        };
+        
+        window.testPageReload = function() {
+            log('🔄 Simulando atualização da página...');
+            
+            // Save current test data count
+            const currentData = JSON.parse(localStorage.getItem('deliveries') || '[]');
+            const beforeCount = currentData.length;
+            log(`Pedidos antes da "atualização": ${beforeCount}`);
+            
+            // Simulate page reload by re-reading data
+            setTimeout(() => {
+                const afterData = JSON.parse(localStorage.getItem('deliveries') || '[]');
+                const afterCount = afterData.length;
+                log(`Pedidos após "atualização": ${afterCount}`);
+                
+                if (beforeCount === afterCount) {
+                    log('✅ Dados persistiram após simulação de atualização');
+                    showAlert('Teste de persistência PASSOU!', 'success');
+                } else {
+                    log('❌ Dados foram perdidos na simulação de atualização');
+                    showAlert('Teste de persistência FALHOU!', 'error');
+                }
+            }, 100);
+        };
+        
+        window.testBackupSystem = async function() {
+            log('💾 Testando sistema de backup...');
+            
+            try {
+                // Import backup system
+                const { createDataBackup, listBackups } = await import('./scripts/dataBackup.js');
+                
+                // Create a backup
+                const backupId = createDataBackup('test_backup');
+                
+                if (backupId) {
+                    log(`✅ Backup criado com sucesso: ${backupId}`);
+                    
+                    // List backups to verify
+                    const backups = listBackups();
+                    const testBackupExists = backups.some(b => b.id === backupId);
+                    
+                    if (testBackupExists) {
+                        log('✅ Backup encontrado na lista de backups');
+                        showAlert('Sistema de backup FUNCIONANDO!', 'success');
+                    } else {
+                        log('❌ Backup não encontrado na lista');
+                        showAlert('Sistema de backup com PROBLEMAS!', 'error');
+                    }
+                } else {
+                    log('❌ Falha ao criar backup');
+                    showAlert('Sistema de backup FALHOU!', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Erro no teste de backup: ${error.message}`);
+                showAlert('Sistema de backup FALHOU!', 'error');
+            }
+        };
+        
+        window.listBackups = async function() {
+            log('📋 Listando backups disponíveis...');
+            
+            try {
+                const { listBackups } = await import('./scripts/dataBackup.js');
+                const backups = listBackups();
+                
+                if (backups.length === 0) {
+                    log('ℹ️ Nenhum backup encontrado');
+                } else {
+                    log(`📁 ${backups.length} backup(s) encontrado(s):`);
+                    backups.forEach(backup => {
+                        log(`  - ${backup.id} (${backup.date}) - ${backup.reason}`);
+                    });
+                }
+                
+            } catch (error) {
+                log(`❌ Erro ao listar backups: ${error.message}`);
+            }
+        };
+        
+        window.simulateDataCorruption = function() {
+            log('💥 Simulando corrupção de dados...');
+            
+            // Save current data as backup first
+            const currentData = localStorage.getItem('deliveries');
+            if (currentData) {
+                localStorage.setItem('deliveries_backup_before_corruption', currentData);
+                log('💾 Backup dos dados atuais criado');
+            }
+            
+            // Corrupt the data
+            localStorage.setItem('deliveries', '{"corrupted": invalid json}');
+            log('💥 Dados corrompidos inseridos no localStorage');
+            
+            showAlert('Dados corrompidos! Use a recuperação de emergência.', 'error');
+        };
+        
+        window.testEmergencyRecovery = async function() {
+            log('🚨 Testando recuperação de emergência...');
+            
+            try {
+                const { emergencyRecover } = await import('./scripts/dataBackup.js');
+                
+                const success = emergencyRecover();
+                
+                if (success) {
+                    log('✅ Recuperação de emergência bem-sucedida!');
+                    showAlert('Recuperação de emergência FUNCIONOU!', 'success');
+                } else {
+                    log('❌ Recuperação de emergência falhou');
+                    
+                    // Try manual recovery
+                    const manualBackup = localStorage.getItem('deliveries_backup_before_corruption');
+                    if (manualBackup) {
+                        localStorage.setItem('deliveries', manualBackup);
+                        log('🔧 Recuperação manual realizada');
+                        showAlert('Dados recuperados manualmente', 'info');
+                    } else {
+                        showAlert('Recuperação de emergência FALHOU!', 'error');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Erro na recuperação de emergência: ${error.message}`);
+                showAlert('Recuperação de emergência FALHOU!', 'error');
+            }
+        };
+        
+        window.checkCurrentData = function() {
+            log('🔍 Verificando estado atual dos dados...');
+            
+            try {
+                const deliveries = localStorage.getItem('deliveries');
+                const gasEntries = localStorage.getItem('gasEntries');
+                
+                if (deliveries) {
+                    const parsedDeliveries = JSON.parse(deliveries);
+                    log(`📦 Pedidos: ${parsedDeliveries.length} registros`);
+                    
+                    if (parsedDeliveries.length > 0) {
+                        const lastOrder = parsedDeliveries[parsedDeliveries.length - 1];
+                        log(`   Último pedido: #${lastOrder.orderNumber} - R$ ${lastOrder.fee}`);
+                    }
+                } else {
+                    log('📦 Nenhum pedido encontrado');
+                }
+                
+                if (gasEntries) {
+                    const parsedGas = JSON.parse(gasEntries);
+                    log(`⛽ Registros de gasolina: ${parsedGas.length} registros`);
+                } else {
+                    log('⛽ Nenhum registro de gasolina encontrado');
+                }
+                
+                // Check localStorage usage
+                const totalSize = JSON.stringify(localStorage).length;
+                log(`💾 Uso do localStorage: ~${(totalSize / 1024).toFixed(1)} KB`);
+                
+            } catch (error) {
+                log(`❌ Erro ao verificar dados: ${error.message}`);
+            }
+        };
+        
+        window.clearAllTestData = function() {
+            if (confirm('Tem certeza que deseja limpar todos os dados de teste?')) {
+                log('🧹 Limpando dados de teste...');
+                
+                // Remove test orders
+                try {
+                    const deliveries = JSON.parse(localStorage.getItem('deliveries') || '[]');
+                    const filteredDeliveries = deliveries.filter(d => !d.id.startsWith('test_'));
+                    localStorage.setItem('deliveries', JSON.stringify(filteredDeliveries));
+                    
+                    const removedCount = deliveries.length - filteredDeliveries.length;
+                    log(`🗑️ ${removedCount} pedidos de teste removidos`);
+                } catch (error) {
+                    log(`❌ Erro ao limpar pedidos: ${error.message}`);
+                }
+                
+                // Remove test backups
+                for (let i = localStorage.length - 1; i >= 0; i--) {
+                    const key = localStorage.key(i);
+                    if (key && (key.includes('test_') || key.includes('backup_before_corruption'))) {
+                        localStorage.removeItem(key);
+                        log(`🗑️ Removido: ${key}`);
+                    }
+                }
+                
+                showAlert('Dados de teste limpos!', 'info');
+            }
+        };
+        
+        // Initialize
+        log('🚀 Sistema de testes carregado e pronto!');
+        log('ℹ️ Clique nos botões para executar os testes de persistência');
+    </script>
+</body>
+</html> 

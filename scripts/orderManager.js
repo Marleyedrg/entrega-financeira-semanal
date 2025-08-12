@@ -1,6 +1,7 @@
 import { deliveries, saveDeliveries } from './data.js';
 import { normalizeDate, getCurrentDate } from './utils.js';
 import { validateOrder } from './validation.js';
+import { autoBackup } from './dataBackup.js';
 
 /**
  * Cria um novo pedido
@@ -9,6 +10,12 @@ import { validateOrder } from './validation.js';
  */
 export async function createOrder(orderData) {
   try {
+    // Create backup before making any changes
+    const backupId = autoBackup('create_order');
+    if (backupId) {
+      console.log('Backup created before order creation:', backupId);
+    }
+    
     // Validação usando o módulo de validação
     const validationError = validateOrder(orderData);
     if (validationError) {
@@ -41,6 +48,33 @@ export async function createOrder(orderData) {
     sortDeliveries();
     saveDeliveries();
 
+    // Verify the order was actually saved
+    const savedDeliveries = JSON.parse(localStorage.getItem('deliveries') || '[]');
+    const orderWasSaved = savedDeliveries.some(d => 
+      d.id === newOrder.id && 
+      d.orderNumber === newOrder.orderNumber && 
+      d.date === newOrder.date
+    );
+    
+    if (!orderWasSaved) {
+      console.error('Order was not properly saved to localStorage!');
+      // Try to save again
+      localStorage.setItem('deliveries', JSON.stringify(deliveries));
+      
+      // Verify again
+      const recheck = JSON.parse(localStorage.getItem('deliveries') || '[]');
+      const recheckSaved = recheck.some(d => 
+        d.id === newOrder.id && 
+        d.orderNumber === newOrder.orderNumber && 
+        d.date === newOrder.date
+      );
+      
+      if (!recheckSaved) {
+        throw new Error('Falha crítica ao salvar pedido. Verifique se o navegador permite armazenamento local.');
+      }
+    }
+    
+    console.log('Order successfully saved and verified in localStorage');
     return newOrder;
   } catch (error) {
     console.error('Erro ao criar pedido:', error);

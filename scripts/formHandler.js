@@ -11,6 +11,7 @@ import {
   gasEntries
 } from './data.js';
 import { renderAnalytics } from './analytics.js';
+import { smartDatePreservation, addQuickDateSelector } from './datePreservation.js';
 
 /**
  * Manipula o envio do formulário de pedidos
@@ -57,13 +58,15 @@ export async function handleOrderFormSubmit(event) {
       image: processedImage
     });
     
-    // Clear form
+    // Clear form but preserve the date intelligently
+    const currentDateValue = document.getElementById('date').value;
+    
     event.target.reset();
     imagePreview.innerHTML = '';
     document.getElementById('imageError').textContent = '';
     
-    // Set current date
-    document.getElementById('date').value = getCurrentDate();
+    // Use smart date preservation
+    smartDatePreservation('date', 'order');
     
     // Atualiza a interface
     loadDeliveries();
@@ -71,20 +74,9 @@ export async function handleOrderFormSubmit(event) {
     
     showToast('Pedido registrado com sucesso!', 'success');
     
-    // Reload the page after a short delay to allow the toast to be seen and data to be saved
-    setTimeout(() => {
-      // Verify that data was saved before reloading
-      const savedDeliveries = JSON.parse(localStorage.getItem('deliveries') || '[]');
-      const hasNewOrder = savedDeliveries.some(d => d.orderNumber === orderNumber && d.date === date);
-      
-      if (hasNewOrder) {
-        console.log('New order saved successfully, reloading page...');
-        window.location.reload();
-      } else {
-        console.warn('Order may not have been saved yet, waiting a bit longer...');
-        setTimeout(() => window.location.reload(), 500);
-      }
-    }, 1000);
+    // Remove the automatic page reload - it was causing data loss
+    // The interface is already updated above with loadDeliveries() and renderAnalytics()
+    console.log('New order saved successfully - interface updated without page reload');
   } catch (error) {
     console.error('Erro ao criar pedido:', error);
     showToast(error.message, 'error');
@@ -120,9 +112,11 @@ export function handleGasFormSubmit(event) {
     gasEntries.push(newEntry);
     saveGasEntries();
     
-    // Limpa o formulário
+    // Clear form but preserve the date intelligently
     event.target.reset();
-    document.getElementById('gasDate').value = getCurrentDate();
+    
+    // Use smart date preservation for gas entries
+    smartDatePreservation('gasDate', 'gas');
     
     // Atualiza a interface
     updateGasTable();
@@ -307,6 +301,9 @@ export function setupOrderForm() {
   // Set current date as default
   date.value = getCurrentDate();
   
+  // Add quick date selector for convenience
+  setTimeout(() => addQuickDateSelector('date'), 100);
+  
   // Remove existing listeners by replacing elements with clones
   if (orderForm) {
     const newOrderForm = orderForm.cloneNode(true);
@@ -385,6 +382,9 @@ export function setupGasForm() {
   
   // Set current date as default
   document.getElementById('gasDate').value = getCurrentDate();
+  
+  // Add quick date selector for gas form
+  setTimeout(() => addQuickDateSelector('gasDate'), 100);
   
   // Remove existing listener
   gasForm.onsubmit = null;

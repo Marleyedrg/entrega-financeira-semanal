@@ -134,8 +134,25 @@ export function saveDeliveries() {
     // Ordena as entregas antes de salvar
     sortDeliveries();
     
-    // Salva no localStorage
-    localStorage.setItem('deliveries', JSON.stringify(deliveries));
+    // Salva no localStorage with verification
+    const dataToSave = JSON.stringify(deliveries);
+    localStorage.setItem('deliveries', dataToSave);
+    
+    // Verify the save was successful
+    const savedData = localStorage.getItem('deliveries');
+    if (savedData !== dataToSave) {
+      console.error('Data verification failed after save!');
+      // Try once more
+      localStorage.setItem('deliveries', dataToSave);
+      
+      // Final verification
+      const finalCheck = localStorage.getItem('deliveries');
+      if (finalCheck !== dataToSave) {
+        throw new Error('Falha crítica ao verificar dados salvos no localStorage');
+      }
+    }
+    
+    console.log(`Successfully saved ${deliveries.length} deliveries to localStorage`);
     
     // Limpa o cache de dados analíticos
     clearDataCache();
@@ -148,7 +165,8 @@ export function saveDeliveries() {
     notifyDataChange('deliveries');
   } catch (error) {
     console.error('Erro ao salvar entregas:', error);
-    showToast('Erro ao salvar entregas', 'error');
+    showToast(`Erro ao salvar entregas: ${error.message}`, 'error');
+    throw error; // Re-throw so calling code knows save failed
   }
 }
 

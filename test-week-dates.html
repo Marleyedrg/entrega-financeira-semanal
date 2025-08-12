@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste dos Dias da Semana</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .day-button {
+            display: inline-block;
+            padding: 8px 12px;
+            margin: 5px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        .day-button:hover {
+            background: #e9ecef;
+        }
+        .today {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-color: #bbdefb;
+            font-weight: bold;
+        }
+        #result {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🗓️ Teste dos Seletores de Dias da Semana</h1>
+    
+    <div class="test-section">
+        <h2>Como Funciona Agora (Corrigido)</h2>
+        <p>Os botões mostram:</p>
+        <ul>
+            <li><strong>Hoje</strong> - Data atual</li>
+            <li><strong>Demais dias</strong> - Os últimos 6 dias em ordem decrescente (ontem, anteontem, etc.)</li>
+        </ul>
+        
+        <h3>Exemplo:</h3>
+        <p>Se hoje é <strong>Segunda-feira (16/12/2024)</strong>, os botões serão:</p>
+        <div id="example-buttons"></div>
+        
+        <h3>Teste Interativo:</h3>
+        <button onclick="generateButtons()">Gerar Botões para Hoje</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // Simulate the date logic from the application
+        function getCurrentDate() {
+            return new Date().toISOString().split('T')[0];
+        }
+        
+        function getDateOffset(days) {
+            const date = new Date();
+            date.setDate(date.getDate() + days);
+            return date.toISOString().split('T')[0];
+        }
+        
+        function getWeekDates() {
+            const today = new Date();
+            const dates = [];
+            
+            // Days of the week in Portuguese
+            const dayNames = [
+                'Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'
+            ];
+            
+            // Add today first
+            dates.push({
+                label: 'Hoje',
+                value: getCurrentDate()
+            });
+            
+            // Add the last 6 days in descending order (yesterday, day before yesterday, etc.)
+            // This gives us the most recent occurrence of each day going backwards
+            for (let i = 1; i <= 6; i++) {
+                const date = getDateOffset(-i);
+                const dateObj = new Date(date + 'T00:00:00');
+                const dayOfWeek = dateObj.getDay();
+                const dayName = dayNames[dayOfWeek];
+                
+                dates.push({
+                    label: dayName,
+                    value: date
+                });
+            }
+            
+            return dates;
+        }
+        
+        function formatDate(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            return date.toLocaleDateString('pt-BR');
+        }
+        
+        function generateButtons() {
+            const weekDates = getWeekDates();
+            const today = new Date();
+            const todayName = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][today.getDay()];
+            
+            let result = `Hoje é: ${todayName} (${formatDate(getCurrentDate())})\n\n`;
+            result += `Botões gerados:\n`;
+            
+            weekDates.forEach((item, index) => {
+                const formattedDate = formatDate(item.value);
+                result += `${index + 1}. ${item.label} → ${formattedDate} (${item.value})\n`;
+            });
+            
+            result += `\n✅ Agora cada dia da semana mostra sua ocorrência mais recente!`;
+            
+            document.getElementById('result').textContent = result;
+        }
+        
+        // Generate example for Monday
+        function generateExampleButtons() {
+            const exampleContainer = document.getElementById('example-buttons');
+            
+            // Simulate it's Monday, December 16, 2024
+            const exampleDates = [
+                { label: 'Hoje', date: '16/12/2024', isToday: true },
+                { label: 'Domingo', date: '15/12/2024', isToday: false },
+                { label: 'Sábado', date: '14/12/2024', isToday: false },
+                { label: 'Sexta', date: '13/12/2024', isToday: false },
+                { label: 'Quinta', date: '12/12/2024', isToday: false },
+                { label: 'Quarta', date: '11/12/2024', isToday: false },
+                { label: 'Terça', date: '10/12/2024', isToday: false }
+            ];
+            
+            exampleDates.forEach(item => {
+                const button = document.createElement('span');
+                button.className = item.isToday ? 'day-button today' : 'day-button';
+                button.textContent = `${item.label} (${item.date})`;
+                exampleContainer.appendChild(button);
+            });
+        }
+        
+        // Initialize
+        generateExampleButtons();
+    </script>
+</body>
+</html> 

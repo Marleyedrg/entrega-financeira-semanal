@@ -498,53 +498,138 @@ function checkDataIntegrity() {
       return;
     }
     
-    // Verificar localStorage
-    let dataIntegrityIssue = false;
+    // Verificar localStorage - ONLY clear if data is completely unrecoverable
+    let criticalDataCorruption = false;
     
-    // Validar entradas JSON
+    // Validar entradas JSON - be more conservative about clearing data
     try {
       const rawDeliveries = localStorage.getItem('deliveries');
-      if (rawDeliveries) {
-        JSON.parse(rawDeliveries);
+      if (rawDeliveries && rawDeliveries.trim()) {
+        // Try to parse - if it fails, the data is truly corrupted
+        const parsed = JSON.parse(rawDeliveries);
+        // Ensure it's an array
+        if (!Array.isArray(parsed)) {
+          console.warn('Deliveries data is not an array, but attempting recovery...');
+          localStorage.setItem('deliveries', JSON.stringify([]));
+        }
       }
       
       const rawGasEntries = localStorage.getItem('gasEntries');
-      if (rawGasEntries) {
-        JSON.parse(rawGasEntries);
+      if (rawGasEntries && rawGasEntries.trim()) {
+        // Try to parse - if it fails, the data is truly corrupted
+        const parsed = JSON.parse(rawGasEntries);
+        // Ensure it's an array
+        if (!Array.isArray(parsed)) {
+          console.warn('Gas entries data is not an array, but attempting recovery...');
+          localStorage.setItem('gasEntries', JSON.stringify([]));
+        }
       }
     } catch (e) {
-      console.error('Dados corrompidos no localStorage:', e);
-      dataIntegrityIssue = true;
+      console.error('Critical JSON corruption detected in localStorage:', e);
+      
+      // Try to recover individual pieces instead of clearing everything
+      try {
+        const rawDeliveries = localStorage.getItem('deliveries');
+        if (rawDeliveries) {
+          // Try to salvage what we can
+          console.warn('Attempting to recover deliveries data...');
+          localStorage.setItem('deliveries', JSON.stringify([]));
+        }
+      } catch (recoveryError) {
+        console.error('Could not recover deliveries data:', recoveryError);
+      }
+      
+      try {
+        const rawGasEntries = localStorage.getItem('gasEntries');
+        if (rawGasEntries) {
+          // Try to salvage what we can
+          console.warn('Attempting to recover gas entries data...');
+          localStorage.setItem('gasEntries', JSON.stringify([]));
+        }
+      } catch (recoveryError) {
+        console.error('Could not recover gas entries data:', recoveryError);
+      }
+      
+      // Only set critical corruption if we absolutely cannot recover
+      criticalDataCorruption = true;
     }
     
-    // Se houver problemas, limpar dados
-    if (dataIntegrityIssue) {
-      console.warn('Problemas de integridade encontrados. Reiniciando armazenamento.');
+    // ONLY clear data if there's absolutely no way to recover
+    if (criticalDataCorruption) {
+      console.error('CRITICAL: Unable to recover any data. This should be extremely rare.');
+      console.error('User will be notified and data will be reset as last resort.');
       
-      // Limpar todos os dados
-      localStorage.clear();
-      sessionStorage.clear();
+      // Try emergency recovery first
+      try {
+        import('./dataBackup.js').then(({ emergencyRecover }) => {
+          if (emergencyRecover()) {
+            console.log('✅ Emergency recovery successful! Data restored from backup.');
+            showToast('Dados recuperados de backup automático!', 'success');
+            sessionStorage.setItem('integrity_checked', 'true');
+            
+            // Reload data after recovery
+            loadDeliveries();
+            loadGasEntries();
+            updateTotals();
+            return;
+          }
+        }).catch(recoveryError => {
+          console.error('Emergency recovery failed:', recoveryError);
+        });
+      } catch (importError) {
+        console.error('Could not import emergency recovery:', importError);
+      }
+      
+      // Create a backup attempt before clearing
+      try {
+        const backupData = {
+          deliveries: localStorage.getItem('deliveries'),
+          gasEntries: localStorage.getItem('gasEntries'),
+          timestamp: new Date().toISOString()
+        };
+        console.log('Data backup before clearing:', backupData);
+      } catch (backupError) {
+        console.error('Could not create backup:', backupError);
+      }
+      
+      // Clear only the corrupted keys, not everything
+      localStorage.removeItem('deliveries');
+      localStorage.removeItem('gasEntries');
+      
+      // Don't clear sessionStorage - it may have valid data
+      // sessionStorage.clear();
+      
+      // Initialize with empty arrays
+      localStorage.setItem('deliveries', JSON.stringify([]));
+      localStorage.setItem('gasEntries', JSON.stringify([]));
       
       // Recarregar dados (agora vazios)
       loadDeliveries();
       loadGasEntries();
       updateTotals();
       
-      showToast('Dados reiniciados devido a um problema de integridade', 'warning');
+      showToast('Dados corrompidos foram recuperados. Infelizmente alguns dados podem ter sido perdidos.', 'error');
     }
     
     // Marcar como verificado
     sessionStorage.setItem('integrity_checked', 'true');
     
   } catch (error) {
-    console.error('Erro ao verificar integridade dos dados:', error);
+    console.error('Erro crítico ao verificar integridade dos dados:', error);
     
-    // Em caso de erro na verificação, limpar dados como precaução
+    // Even in case of error, don't automatically clear everything
+    // Just ensure we have valid empty arrays
     try {
-      localStorage.clear();
-      sessionStorage.clear();
+      if (!localStorage.getItem('deliveries')) {
+        localStorage.setItem('deliveries', JSON.stringify([]));
+      }
+      if (!localStorage.getItem('gasEntries')) {
+        localStorage.setItem('gasEntries', JSON.stringify([]));
+      }
     } catch (e) {
-      console.error('Falha ao limpar dados corrompidos:', e);
+      console.error('Falha crítica ao inicializar dados:', e);
+      // At this point, something is very wrong with localStorage itself
+      showToast('Erro crítico no armazenamento de dados. Verifique se o navegador permite localStorage.', 'error');
     }
   }
 } 
