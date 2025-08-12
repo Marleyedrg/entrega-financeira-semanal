@@ -1023,14 +1023,4 @@ header {
   }
 }
 
-#finishWeekButton {
-  background: #FFD700; /* Yellow color */
-  color: white;
-  box-shadow: 0 2px 4px rgba(255, 215, 0, 0.3);
-  border-radius: 0;
-}
-
-#finishWeekButton:hover {
-  box-shadow: 0 4px 8px rgba(255, 215, 0, 0.4);
-  transform: translateY(-1px);
-} 
+ 

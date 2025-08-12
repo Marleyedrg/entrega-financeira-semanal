@@ -323,71 +323,7 @@ body.modal-open {
   justify-content: center;
 }
 
-/* High quality mode controls */
-.quality-controls {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1001;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-#highQualityToggle {
-  background: rgba(0, 0, 0, 0.7);
-  border: none;
-  color: white;
-  font-size: 14px;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 20px;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  opacity: 0.8;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-#highQualityToggle:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.8);
-}
-
-#highQualityToggle.active {
-  background: rgba(23, 148, 26, 0.8);
-  opacity: 1;
-}
-
-#highQualityToggle:disabled {
-  opacity: 0.6;
-  cursor: wait;
-}
-
-#highQualityToggle i {
-  font-size: 16px;
-}
-
-/* Loading animation for image processing */
-#modalImage.loading {
-  opacity: 0.7;
-  filter: blur(2px);
-}
-
-#modalImage.loading::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 50px;
-  height: 50px;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top: 4px solid white;
-  animation: spin 1s linear infinite;
-}
+/* High quality mode controls removed - images are now saved in original quality */
 
 /* Enhanced mobile styles */
 @media (max-width: 768px) {
@@ -413,24 +349,11 @@ body.modal-open {
     transition: none; /* Remove transition during active dragging for better responsiveness */
   }
   
-  /* Adjust high quality toggle for mobile */
-  .quality-controls {
-    top: 15px;
-    right: 15px;
-  }
-  
-  #highQualityToggle {
-    font-size: 13px;
-    padding: 10px 14px;
-  }
-  
-  #highQualityToggle i {
-    font-size: 15px;
-  }
+  /* High quality toggle styles removed - images are now saved in original quality */
   
   /* Add instructions for first-time users */
   .modal::before {
-    content: "Pinçe para zoom • Toque duplo para ampliar • Use Alta Qualidade para detalhes";
+    content: "Pinçe para zoom • Toque duplo para ampliar • Arrastar para mover a imagem";
     position: absolute;
     bottom: 80px;
     left: 0;

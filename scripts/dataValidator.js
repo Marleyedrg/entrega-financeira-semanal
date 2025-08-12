@@ -31,8 +31,7 @@ const SCHEMAS = {
     },
     image: { 
       type: 'any', 
-      required: true,
-      message: 'O comprovante é obrigatório'
+      required: false
     },
     status: { 
       type: 'string', 
@@ -42,7 +41,7 @@ const SCHEMAS = {
     }
   },
   
-  // Esquema para abastecimentos
+  // Esquema para gastos
   gasEntry: {
     id: { type: 'string', required: false },
     date: { 
@@ -56,6 +55,10 @@ const SCHEMAS = {
       required: true,
       validate: (val) => val && parseFloat(val) > 0,
       message: 'Valor deve ser maior que zero'
+    },
+    description: { 
+      type: 'string', 
+      required: false
     },
     image: { 
       type: 'any', 

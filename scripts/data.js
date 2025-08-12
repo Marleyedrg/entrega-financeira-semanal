@@ -363,7 +363,7 @@ export function updateDeliveriesTable() {
   }
 }
 
-// Função para atualizar a tabela de gasolina
+// Função para atualizar a tabela de gastos
 export function updateGasTable() {
   const tbody = document.getElementById('gasTableBody');
   if (!tbody) return;
@@ -376,10 +376,12 @@ export function updateGasTable() {
     // Sanitize data and handle invalid values
     const formattedDate = formatDate(entry.date) || 'Data inválida';
     const amount = parseFloat(entry.amount) || 0;
+    const description = entry.description || 'Gasto';
     const safeId = document.createTextNode(entry.id || '').textContent;
     
     tr.innerHTML = `
       <td>${formattedDate}</td>
+      <td>${description}</td>
       <td>R$ ${formatCurrency(amount)}</td>
       <td>
         <button class="action-button delete" title="Excluir">
@@ -395,10 +397,10 @@ export function updateGasTable() {
         const amountFormatted = formatCurrency(amount);
         // Usar o sistema de confirmação personalizado
         if (window.confirmGasDeletion) {
-          window.confirmGasDeletion(safeId, amountFormatted);
+          window.confirmGasDeletion(safeId, amountFormatted, description);
         } else {
           // Fallback para confirmação nativa
-          if (confirm(`Tem certeza que deseja excluir o abastecimento no valor de R$ ${amountFormatted}?`)) {
+          if (confirm(`Tem certeza que deseja excluir o gasto "${description}" no valor de R$ ${amountFormatted}?`)) {
             window.deleteGasEntry(safeId);
           }
         }

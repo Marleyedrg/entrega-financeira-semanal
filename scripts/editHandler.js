@@ -152,7 +152,7 @@ function setupEditListeners() {
     const imageError = document.getElementById('editImageError');
     
     if (imagePreview) imagePreview.innerHTML = '';
-    if (imageError) imageError.textContent = 'O comprovante é obrigatório';
+    // Imagem não é mais obrigatória
     setUnsavedChanges(true);
   };
 }

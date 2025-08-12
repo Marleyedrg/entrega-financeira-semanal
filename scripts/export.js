@@ -24,9 +24,9 @@ function validateExportData(data, type) {
       if (typeof item.fee !== 'number' && item.fee !== '') {
         errors.push(`Entrega #${index + 1}: Taxa inválida`);
       }
-    } else if (type === 'Gasolina') {
+    } else if (type === 'Gastos') {
       if (typeof item.amount !== 'number' && item.amount !== '') {
-        errors.push(`Gasolina #${index + 1}: Valor inválido`);
+        errors.push(`Gasto #${index + 1}: Valor inválido`);
       }
     }
   });
@@ -38,14 +38,14 @@ function validateExportData(data, type) {
 export function generateCSV(includeGas = true) {
   // Validar dados antes de exportar
   const deliveryErrors = validateExportData(deliveries, 'Entrega');
-  const gasErrors = includeGas ? validateExportData(gasEntries, 'Gasolina') : [];
+  const gasErrors = includeGas ? validateExportData(gasEntries, 'Gastos') : [];
   
   const allErrors = [...deliveryErrors, ...gasErrors];
   if (allErrors.length > 0) {
     throw new Error(`Erros nos dados:\n${allErrors.join('\n')}`);
   }
   
-  const headers = ['Data', 'Tipo', 'ID', 'Número do Pedido', 'Valor Pedido', 'Valor Gasolina', 'Status', 'Imagem'];
+  const headers = ['Data', 'Tipo', 'ID', 'Número do Pedido', 'Valor Pedido', 'Valor Gastos', 'Descrição Gasto', 'Status', 'Imagem'];
   const rows = [];
   
   // Adicionar entregas
@@ -57,21 +57,23 @@ export function generateCSV(includeGas = true) {
       delivery.orderNumber,
       delivery.fee,
       '',
+      '',
       delivery.fee ? 'concluido' : 'pendente',
       delivery.image || ''
     ]);
   });
   
-  // Adicionar registros de gasolina se includeGas for true
+  // Adicionar registros de gastos se includeGas for true
   if (includeGas) {
     gasEntries.forEach(entry => {
       rows.push([
         formatDate(entry.date),
-        'Gasolina',
+        'Gastos',
         entry.id,
         '',
         '',
         entry.amount,
+        entry.description || 'Gasto',
         'Pago',
         entry.image || ''
       ]);
@@ -149,61 +151,95 @@ export function clearAllData() {
  * and resetting application state
  */
 function performCompleteDataCleanup() {
-  // Clear localStorage
-  localStorage.clear();
+  console.log('🧹 Iniciando limpeza completa de dados...');
   
-  // Clear sessionStorage
-  sessionStorage.clear();
-  
-  // Reset in-memory arrays
-  deliveries.length = 0;
-  gasEntries.length = 0;
-  
-  // Clear analytics cache
-  clearDataCache();
-  
-  // Clear any form inputs and image previews
-  clearFormInputs();
-  
-  // Clear any broadcast channels
   try {
-    const syncChannel = new BroadcastChannel('entrega_financeira_sync');
-    syncChannel.postMessage({
-      type: 'FULL_CLEAR',
-      timestamp: Date.now()
-    });
-    syncChannel.close();
-  } catch (e) {
-    console.log('BroadcastChannel não disponível para limpeza');
-  }
-  
-  // Force cleanup of any object URLs
-  const images = document.querySelectorAll('img[src^="blob:"]');
-  images.forEach(img => {
-    if (img.src.startsWith('blob:')) {
-      URL.revokeObjectURL(img.src);
+    // Clear localStorage
+    console.log('🧹 Limpando localStorage...');
+    localStorage.clear();
+    
+    // Clear sessionStorage
+    console.log('🧹 Limpando sessionStorage...');
+    sessionStorage.clear();
+    
+    // Reset in-memory arrays
+    console.log('🧹 Limpando arrays em memória...');
+    deliveries.length = 0;
+    gasEntries.length = 0;
+    
+    // Clear analytics cache
+    console.log('🧹 Limpando cache de analytics...');
+    clearDataCache();
+    
+    // Clear any form inputs and image previews
+    console.log('🧹 Limpando formulários...');
+    clearFormInputs();
+    
+    // Clear any broadcast channels
+    try {
+      console.log('🧹 Enviando mensagem de limpeza para outras abas...');
+      const syncChannel = new BroadcastChannel('entrega_financeira_sync');
+      syncChannel.postMessage({
+        type: 'FULL_CLEAR',
+        timestamp: Date.now()
+      });
+      syncChannel.close();
+    } catch (e) {
+      console.log('BroadcastChannel não disponível para limpeza');
     }
-  });
-  
-  // Reload data (which will now be empty)
-  loadDeliveries();
-  loadGasEntries();
-  updateTotals();
-  
-  // Force tab sync
-  forceSyncAllTabs();
+    
+    // Force cleanup of any object URLs
+    console.log('🧹 Limpando URLs de objetos...');
+    const images = document.querySelectorAll('img[src^="blob:"]');
+    images.forEach(img => {
+      if (img.src.startsWith('blob:')) {
+        URL.revokeObjectURL(img.src);
+      }
+    });
+    
+    // Reload data (which will now be empty)
+    console.log('🧹 Recarregando dados (agora vazios)...');
+    loadDeliveries();
+    loadGasEntries();
+    updateTotals();
+    
+    // Update analytics with empty data
+    console.log('🧹 Atualizando analytics...');
+    renderAnalytics();
+    
+    // Force tab sync
+    console.log('🧹 Sincronizando abas...');
+    forceSyncAllTabs();
+    
+    console.log('✅ Limpeza completa de dados concluída!');
+  } catch (error) {
+    console.error('❌ Erro durante limpeza de dados:', error);
+    throw error;
+  }
 }
 
 // Função para finalizar a semana
 export function finishWeek() {
+  console.log('🏁 Função finishWeek chamada');
+  
   if (!confirm('Tem certeza que deseja finalizar a semana? Isso irá exportar e limpar todos os dados.')) {
+    console.log('🏁 Usuário cancelou a finalização da semana');
     return;
   }
+  
+  console.log('🏁 Usuário confirmou finalização da semana');
 
   try {
+    console.log('🏁 Verificando dados para exportar...');
+    console.log('🏁 Entregas:', deliveries.length, 'Gastos:', gasEntries.length);
+    
     // Verificar se há dados para exportar
     if (deliveries.length === 0 && gasEntries.length === 0) {
-      throw new Error('Não há dados para exportar');
+      console.log('⚠️ Não há dados para exportar, apenas limpando...');
+      performCompleteDataCleanup();
+      showToast('Não havia dados para exportar. Dados limpos com sucesso!', 'info');
+      setTimeout(() => window.location.reload(), 1000);
+      return;
     }
     
     const date = new Date();
@@ -220,6 +256,8 @@ export function finishWeek() {
     
     // Função para limpar dados após o download
     const clearDataAfterExport = () => {
+      console.log('🚀 Iniciando limpeza após exportação...');
+      
       // Perform complete data cleanup
       performCompleteDataCleanup();
       
@@ -231,11 +269,14 @@ export function finishWeek() {
         const hasLocalStorageData = localStorage.getItem('deliveries') || localStorage.getItem('gasEntries');
         
         if (hasLocalStorageData) {
-          console.warn('Data may not have been fully cleared, attempting one more cleanup...');
+          console.warn('⚠️ Dados podem não ter sido totalmente limpos, tentando limpeza adicional...');
           performCompleteDataCleanup();
-          setTimeout(() => window.location.reload(), 500);
+          setTimeout(() => {
+            console.log('🔄 Recarregando página após limpeza adicional...');
+            window.location.reload();
+          }, 500);
         } else {
-          console.log('Data cleared successfully, reloading page...');
+          console.log('✅ Dados limpos com sucesso, recarregando página...');
           window.location.reload();
         }
       }, 1500);
@@ -275,6 +316,8 @@ export function finishWeek() {
     
     // Função de fallback para download direto
     function triggerDirectDownload(shouldClearData) {
+      console.log('📥 Iniciando download direto, shouldClearData:', shouldClearData);
+      
       const csvUrl = URL.createObjectURL(csvBlob);
       const link = document.createElement('a');
       link.href = csvUrl;
@@ -284,11 +327,15 @@ export function finishWeek() {
       link.click();
       
       setTimeout(() => {
+        console.log('📥 Download concluído, limpando recursos...');
         document.body.removeChild(link);
         URL.revokeObjectURL(csvUrl);
         
         if (shouldClearData) {
+          console.log('📥 Chamando clearDataAfterExport...');
           clearDataAfterExport();
+        } else {
+          console.log('📥 shouldClearData é false, não limpando dados');
         }
       }, 300);
     }
@@ -302,7 +349,7 @@ export function finishWeek() {
 export function generateCSVNoImages(includeGas = true) {
   // Validar dados antes de exportar
   const deliveryErrors = validateExportData(deliveries, 'Entrega');
-  const gasErrors = includeGas ? validateExportData(gasEntries, 'Gasolina') : [];
+  const gasErrors = includeGas ? validateExportData(gasEntries, 'Gastos') : [];
   
   const allErrors = [...deliveryErrors, ...gasErrors];
   if (allErrors.length > 0) {
@@ -310,7 +357,7 @@ export function generateCSVNoImages(includeGas = true) {
   }
   
   // Remover a coluna de Imagem
-  const headers = ['Data', 'Tipo', 'ID', 'Número do Pedido', 'Valor Pedido', 'Valor Gasolina', 'Status'];
+  const headers = ['Data', 'Tipo', 'ID', 'Número do Pedido', 'Valor Pedido', 'Valor Gastos', 'Descrição Gasto', 'Status'];
   const rows = [];
   
   // Adicionar entregas
@@ -322,20 +369,22 @@ export function generateCSVNoImages(includeGas = true) {
       delivery.orderNumber,
       delivery.fee,
       '',
+      '',
       delivery.fee ? 'concluido' : 'pendente'
     ]);
   });
   
-  // Adicionar registros de gasolina se includeGas for true
+  // Adicionar registros de gastos se includeGas for true
   if (includeGas) {
     gasEntries.forEach(entry => {
       rows.push([
         formatDate(entry.date),
-        'Gasolina',
+        'Gastos',
         entry.id,
         '',
         '',
         entry.amount,
+        entry.description || 'Gasto',
         'Pago'
       ]);
     });
@@ -544,7 +593,10 @@ export function exportCustomCSV(includeDeliveries = true, includeGas = true, inc
     
     // Definir cabeçalhos com base nas opções
     let headers = ['Data', 'Tipo', 'ID', 'Número do Pedido', 'Valor Pedido'];
-    if (includeGas) headers.push('Valor Gasolina');
+    if (includeGas) {
+      headers.push('Valor Gastos');
+      headers.push('Descrição Gasto');
+    }
     headers.push('Status');
     if (includeImages) headers.push('Imagem');
     
@@ -561,7 +613,10 @@ export function exportCustomCSV(includeDeliveries = true, includeGas = true, inc
           delivery.fee,
         ];
         
-        if (includeGas) row.push(''); // Coluna vazia para valor gasolina
+        if (includeGas) {
+          row.push(''); // Coluna vazia para valor gastos
+          row.push(''); // Coluna vazia para descrição gasto
+        }
         
         row.push(delivery.fee ? 'concluido' : 'pendente');
         
@@ -571,18 +626,21 @@ export function exportCustomCSV(includeDeliveries = true, includeGas = true, inc
       });
     }
     
-    // Adicionar registros de gasolina filtrados se solicitado
+    // Adicionar registros de gastos filtrados se solicitado
     if (includeGas) {
       filteredGasEntries.forEach(entry => {
         const row = [
           formatDate(entry.date),
-          'Gasolina',
+          'Gastos',
           entry.id,
           '',
           '',
         ];
         
-        if (includeGas) row.push(entry.amount);
+        if (includeGas) {
+          row.push(entry.amount);
+          row.push(entry.description || 'Gasto');
+        }
         
         row.push('Pago');
         

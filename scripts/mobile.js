@@ -296,23 +296,7 @@ function setupMobileFileHandling() {
     });
   }
   
-  // Enhance export button for mobile
-  const finishWeekButton = document.getElementById('finishWeekButton');
-  
-  if (finishWeekButton) {
-    const originalClickHandler = finishWeekButton.onclick;
-    finishWeekButton.onclick = (e) => {
-      if (isMobileDevice()) {
-        e.preventDefault();
-        
-        if (confirm('Tem certeza que deseja finalizar a semana? Isso irá exportar e limpar todos os dados.')) {
-          showExportModal();
-        }
-      } else if (originalClickHandler) {
-        originalClickHandler.call(finishWeekButton, e);
-      }
-    };
-  }
+
   
   // Make sure the export modal works on mobile
   const exportModal = document.getElementById('exportModal');

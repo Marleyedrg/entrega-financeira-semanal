@@ -31,10 +31,8 @@ export function validateOrder(orderData) {
     }
   }
 
-  // Validação da imagem
-  if (!orderData.image) {
-    return 'O comprovante é obrigatório';
-  }
+  // Validação da imagem (agora opcional)
+  // Imagem não é mais obrigatória
 
   // Se chegou até aqui, não há erros
   return null;

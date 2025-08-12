@@ -70,8 +70,8 @@ export function confirmDeliveryDeletion(deliveryId, orderNumber) {
   openModal();
 }
 
-// Abrir modal para confirmação de exclusão de abastecimento
-export function confirmGasDeletion(gasId, amount) {
+// Abrir modal para confirmação de exclusão de gasto
+export function confirmGasDeletion(gasId, amount, description = 'Gasto') {
   state.itemId = gasId;
   state.itemType = 'gas';
   state.expectedValue = amount.toString();
@@ -80,7 +80,7 @@ export function confirmGasDeletion(gasId, amount) {
     deleteGasEntry(gasId);
   };
   
-  messageElement.textContent = `Para confirmar a exclusão, digite o valor do abastecimento: ${amount}`;
+  messageElement.textContent = `Para confirmar a exclusão do gasto "${description}", digite o valor: ${amount}`;
   inputElement.placeholder = 'Digite o valor';
   openModal();
 }

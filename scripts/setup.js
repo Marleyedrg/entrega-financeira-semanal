@@ -112,60 +112,7 @@ function setupEditForms() {
     }
   });
   
-  // Setup for finish week button (with mobile handling via mobile.js)
-  const finishWeekButton = document.getElementById('finishWeekButton');
-  if (finishWeekButton) {
-    // Setup click handler but allow override from mobile.js
-    if (!finishWeekButton.onclick) {
-      finishWeekButton.addEventListener('click', finishWeek);
-    }
-    finishWeekButton.title = "Exportar dados e limpar todas as entregas";
-  }
 
-  const clearDataButton = document.getElementById('clearDataButton');
-  if (clearDataButton) {
-    // Remover eventos existentes para evitar duplicação
-    clearDataButton.replaceWith(clearDataButton.cloneNode(true));
-    
-    // Obter referência ao novo botão
-    const newClearDataButton = document.getElementById('clearDataButton');
-    
-    // Adicionar listener com confirmação de segurança
-    newClearDataButton.addEventListener('click', () => {
-      // Confirmação adicional para evitar limpeza acidental
-      if (confirm('ATENÇÃO: Todos os dados serão permanentemente excluídos. Esta ação não pode ser desfeita.\n\nDeseja continuar?')) {
-        clearAllData(); // Chama a função que limpa todos os dados
-        
-        // Verificar se a limpeza foi bem-sucedida
-        setTimeout(() => {
-          // Validar se localStorage está vazio
-          if (localStorage.length === 0) {
-            console.log('Limpeza de dados validada com sucesso');
-          } else {
-            console.warn('Possível falha na limpeza - ainda existem dados no localStorage');
-            // Tentar limpeza direta como fallback
-            try {
-              localStorage.clear();
-              sessionStorage.clear();
-              
-              // Forçar atualização de dados
-              loadDeliveries();
-              loadGasEntries();
-              updateTotals();
-              
-              showToast('Dados limpos (fallback)', 'info');
-            } catch (e) {
-              console.error('Erro na limpeza fallback:', e);
-            }
-          }
-          
-          // Forçar sincronização entre abas
-          forceSyncAllTabs();
-        }, 500);
-      }
-    });
-    newClearDataButton.title = "Limpar todos os dados";
-  }
 
   // Setup for import button (with mobile handling via mobile.js)
   const importButton = document.getElementById('importButton');

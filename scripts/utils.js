@@ -95,7 +95,6 @@ export function getResourcePath(path) {
 
 // Export image handling functions from imageUtils.js
 export { 
-  compressImage, 
   checkStorageSpace, 
   processImageForStorage, 
   showImageModal,

@@ -92,7 +92,7 @@ export async function handleOrderFormSubmit(event) {
 }
 
 /**
- * Manipula o envio do formulário de gasolina
+ * Manipula o envio do formulário de gastos
  * @param {Event} event - Evento de submit do formulário
  */
 export function handleGasFormSubmit(event) {
@@ -100,18 +100,20 @@ export function handleGasFormSubmit(event) {
   
   const amount = document.getElementById('gasAmount').value.trim();
   const date = document.getElementById('gasDate').value;
+  const description = document.getElementById('gasDescription').value.trim();
   
   try {
     // Validação básica
     if (!amount || !date) {
-      throw new Error('Todos os campos são obrigatórios');
+      throw new Error('Data e valor são obrigatórios');
     }
     
     // Cria novo registro
     const newEntry = {
       id: String(Date.now()),
       amount: parseFloat(amount),
-      date: date
+      date: date,
+      description: description || 'Gasto'
     };
     
     // Adiciona ao array e salva
@@ -127,9 +129,9 @@ export function handleGasFormSubmit(event) {
     updateTotals();
     renderAnalytics();
     
-    showToast('Registro de gasolina adicionado com sucesso!', 'success');
+    showToast('Gasto registrado com sucesso!', 'success');
   } catch (error) {
-    console.error('Erro ao adicionar registro de gasolina:', error);
+    console.error('Erro ao adicionar gasto:', error);
     showToast(error.message, 'error');
   }
 }
@@ -371,12 +373,12 @@ export function setupOrderForm() {
     const imageError = document.getElementById('imageError');
     
     if (imagePreview) imagePreview.innerHTML = '';
-    if (imageError) imageError.textContent = 'O comprovante é obrigatório';
+    // Imagem não é mais obrigatória
   };
 }
 
 /**
- * Configura os event listeners do formulário de gasolina
+ * Configura os event listeners do formulário de gastos
  */
 export function setupGasForm() {
   const gasForm = document.getElementById('gasForm');

@@ -26,10 +26,10 @@ function validateImportedData(entry, type) {
     if (typeof entry.fee !== 'number' && entry.fee !== '') {
       errors.push('Taxa de entrega inválida');
     }
-  } else if (type === 'Gasolina') {
-    // Validar valor da gasolina
+  } else if (type === 'Gastos') {
+    // Validar valor do gasto
     if (typeof entry.amount !== 'number' && entry.amount !== '') {
-      errors.push('Valor da gasolina inválido');
+      errors.push('Valor do gasto inválido');
     }
   }
   
@@ -113,7 +113,7 @@ export function importCSV(event) {
       const lines = text.split('\n').filter(l => l.trim());
       
       // Validar cabeçalhos
-      const expectedHeaders = ['Data', 'Tipo', 'ID', 'Número do Pedido', 'Valor Pedido', 'Valor Gasolina', 'Status', 'Imagem'];
+      const expectedHeaders = ['Data', 'Tipo', 'ID', 'Número do Pedido', 'Valor Pedido', 'Valor Gastos', 'Descrição Gasto', 'Status', 'Imagem'];
       const headers = lines[0].split(separator).map(h => h.trim());
       
       const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
@@ -121,10 +121,10 @@ export function importCSV(event) {
         throw new Error(`Cabeçalhos ausentes no CSV: ${missingHeaders.join(', ')}`);
       }
       
-      // Processar dados de entregas e gasolina
-      const importedDeliveries = [];
-      const importedGasData = [];
-      const errors = [];
+              // Processar dados de entregas e gastos
+        const importedDeliveries = [];
+        const importedGasData = [];
+        const errors = [];
       
       for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
@@ -153,17 +153,18 @@ export function importCSV(event) {
         });
 
         // Processar e validar cada tipo de entrada
-        if (entry['Tipo'] === 'Gasolina') {
+        if (entry['Tipo'] === 'Gastos') {
           const gasEntry = {
             id: entry['ID'] || String(Date.now()),
             date: normalizeDate(parseCSVDate(entry['Data'])),
-            amount: parseFloat(entry['Valor Gasolina']) || 0,
+            amount: parseFloat(entry['Valor Gastos']) || 0,
+            description: entry['Descrição Gasto'] || 'Gasto',
             image: entry['Imagem'] || null
           };
           
-          const validationErrors = validateImportedData(gasEntry, 'Gasolina');
+          const validationErrors = validateImportedData(gasEntry, 'Gastos');
           if (validationErrors.length > 0) {
-            errors.push(`Linha ${i + 1} (Gasolina): ${validationErrors.join(', ')}`);
+            errors.push(`Linha ${i + 1} (Gastos): ${validationErrors.join(', ')}`);
           } else {
             importedGasData.push(gasEntry);
           }
@@ -204,7 +205,7 @@ export function importCSV(event) {
       loadGasEntries();
       updateTotals();
       
-      showToast(`Importação concluída: ${importedDeliveries.length} entregas e ${importedGasData.length} abastecimentos`, 'success');
+      showToast(`Importação concluída: ${importedDeliveries.length} entregas e ${importedGasData.length} gastos`, 'success');
     } catch (error) {
       console.error('Erro na importação:', error);
       showToast(error.message, 'error');

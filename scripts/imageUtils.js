@@ -24,94 +24,15 @@ export function checkStorageSpace() {
   return true;
 }
 
-/**
- * Compress an image for storage
- * @param {File} file - The image file to compress
- * @param {number} maxWidth - Maximum width to resize to
- * @param {number} quality - Compression quality (0-1)
- * @returns {Promise<string>} Base64 encoded compressed image
- */
-export function compressImage(file, maxWidth = 800, quality = 0.7) {
-  return new Promise((resolve, reject) => {
-    // Create a unique object URL
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    
-    // Set up error handling first
-    img.onerror = () => {
-      // Clean up resources
-      URL.revokeObjectURL(url);
-      reject(new Error('Falha ao carregar a imagem'));
-    };
-    
-    img.onload = () => {
-      try {
-        // Create canvas for compression
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        
-        // Resize if necessary
-        if (width > maxWidth) {
-          height = Math.floor(height * (maxWidth / width));
-          width = maxWidth;
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        
-        // Draw image on canvas
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        // Convert to compressed format
-        canvas.toBlob((blob) => {
-          // Always release the object URL immediately after use
-          URL.revokeObjectURL(url);
-          
-          if (blob) {
-            const reader = new FileReader();
-            
-            reader.onloadend = () => {
-              // Ensure we're resolving with a valid result
-              if (reader.result) {
-                // Clean up to prevent memory leaks
-                canvas.width = 0;
-                canvas.height = 0;
-                resolve(reader.result);
-              } else {
-                reject(new Error('Resultado da compressão da imagem é inválido'));
-              }
-            };
-            
-            reader.onerror = (e) => {
-              reject(new Error(`Erro ao ler blob comprimido: ${e.message}`));
-            };
-            
-            reader.readAsDataURL(blob);
-          } else {
-            reject(new Error('Falha na compressão da imagem - blob nulo'));
-          }
-        }, 'image/jpeg', quality);
-      } catch (err) {
-        // Make sure to release the URL in case of error
-        URL.revokeObjectURL(url);
-        reject(new Error(`Erro ao processar imagem: ${err.message}`));
-      }
-    };
-    
-    // Start loading the image
-    img.src = url;
-  });
-}
+// Image compression functionality removed - images are now saved in original quality
 
 // Track ongoing image processing operations
 const processingOperations = new Set();
 
 /**
- * Process and optimize an image for storage with mobile-specific settings
+ * Process an image for storage preserving original quality
  * @param {File} file - The image file to process
- * @returns {Promise<string|null>} Base64 encoded processed image or null on error
+ * @returns {Promise<string|null>} Base64 encoded image or null on error
  */
 export async function processImageForStorage(file) {
   if (!file) return null;
@@ -134,62 +55,10 @@ export async function processImageForStorage(file) {
       throw new Error('Tipo de arquivo não suportado. Use JPG, PNG ou WebP.');
     }
     
-    // Check max file size (5MB)
-    const MAX_FILE_SIZE = 5 * 1024 * 1024;
+    // Check max file size (10MB - increased limit since we're not compressing)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_FILE_SIZE) {
-      showToast('Comprimindo imagem...', 'info');
-    }
-    
-    // Determine quality based on device and file size
-    const mobile = isMobileDevice();
-    
-    // Ajustar configurações para melhor performance em dispositivos móveis
-    let quality = mobile ? 0.5 : 0.7;  // Reduced from 0.6 to 0.5 for mobile
-    let maxWidth = mobile ? 600 : 1000;  // Reduced from 800 to 600 for mobile
-    
-    // Reduzir ainda mais para arquivos muito grandes
-    if (file.size > 3 * 1024 * 1024) { // Mais que 3MB
-      quality = mobile ? 0.3 : 0.5;  // Reduced from 0.4 to 0.3 for mobile
-      maxWidth = mobile ? 500 : 700;  // Reduced from 600 to 500 for mobile
-    }
-    
-    // Implementar compressão em etapas para arquivos muito grandes em dispositivos móveis
-    if (mobile && file.size > 2 * 1024 * 1024) {
-      // For very large files on mobile, do multi-step compression
-      let compressedImage = null;
-      
-      try {
-        // First step - more aggressive resizing
-        compressedImage = await compressImage(file, maxWidth * 0.8, quality);
-        
-        // Check if this operation is still valid
-        if (!processingOperations.has(operationId)) {
-          return null;
-        }
-        
-        // Create a new blob from the base64 string
-        const base64Response = await fetch(compressedImage);
-        const intermediateBlob = await base64Response.blob();
-        
-        // Second step - further compression 
-        if (intermediateBlob.size > 1 * 1024 * 1024) {
-          compressedImage = await compressImage(
-            new File([intermediateBlob], file.name, { type: 'image/jpeg' }), 
-            maxWidth * 0.7, 
-            quality * 0.9
-          );
-        }
-      } catch (innerError) {
-        console.warn('Multi-step compression failed, falling back to standard compression', innerError);
-        // Fall back to standard compression
-      }
-      
-      // If multi-step compression succeeded, return the result
-      if (compressedImage) {
-        return compressedImage;
-      }
-      
-      // If it failed, proceed with standard compression
+      throw new Error('Arquivo muito grande. O tamanho máximo é 10MB.');
     }
     
     // Check if this operation is still valid before proceeding
@@ -198,17 +67,34 @@ export async function processImageForStorage(file) {
       return null;
     }
     
-    // Compress the image
-    const compressedImage = await compressImage(file, maxWidth, quality);
+    // Convert file to base64 without compression to preserve original quality
+    const base64Image = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = function(event) {
+        try {
+          const base64String = event.target.result;
+          resolve(base64String);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      reader.onerror = function() {
+        reject(new Error('Erro ao ler o arquivo de imagem'));
+      };
+      
+      reader.readAsDataURL(file);
+    });
     
-    if (!compressedImage) {
+    if (!base64Image) {
       throw new Error('Falha ao processar a imagem. Tente novamente.');
     }
     
     // Immediate cleanup to prevent memory leaks
     cleanupAfterProcessing();
     
-    return compressedImage;
+    return base64Image;
     
   } catch (error) {
     console.error('Erro ao processar imagem:', error);
@@ -367,8 +253,7 @@ export function showImageModal(src) {
     // Set image source
     modalImg.src = imageUrl;
     
-    // Create high quality mode toggle
-    setupHighQualityMode(modal, modalImg, imageUrl);
+    // High quality functionality removed - images are now saved in original quality
     
     modal.style.display = 'block';
     
@@ -430,10 +315,7 @@ let lastTapTime = 0;
 let isZooming = false;
 let isDragging = false;
 
-// Variables for tracking high quality mode
-let isHighQualityMode = false;
-let originalSrc = null;
-let highQualitySrc = null;
+// High quality mode variables removed - images are now saved in original quality
 
 // Set up all touch events for mobile
 function setupTouchEvents(element) {
@@ -645,7 +527,6 @@ function resetZoomState() {
 function closeImageModal() {
     const modal = document.getElementById('imageModal');
     const modalImg = document.getElementById('modalImage');
-    const highQualityToggle = document.getElementById('highQualityToggle');
     
     if (modal) {
         // Remove visual feedback classes
@@ -665,12 +546,6 @@ function closeImageModal() {
         
         if (zoomInButton) zoomInButton.onclick = null;
         if (zoomOutButton) zoomOutButton.onclick = null;
-        if (highQualityToggle) highQualityToggle.onclick = null;
-        
-        // Clean up memory
-        originalSrc = null;
-        highQualitySrc = null;
-        isHighQualityMode = false;
         
         setTimeout(() => {
             modal.style.display = 'none';
@@ -682,215 +557,10 @@ function closeImageModal() {
     }
 }
 
-/**
- * Sets up high quality mode toggle and functionality
- * @param {HTMLElement} modal - The modal element
- * @param {HTMLImageElement} modalImg - The modal image element
- * @param {string} imageUrl - The original image URL
- */
-function setupHighQualityMode(modal, modalImg, imageUrl) {
-  // Create high quality toggle if it doesn't exist
-  let highQualityToggle = document.getElementById('highQualityToggle');
-  
-  if (!highQualityToggle) {
-    // Create the container for high quality toggle
-    const qualityControlsContainer = document.createElement('div');
-    qualityControlsContainer.className = 'quality-controls';
-    
-    // Create toggle button
-    highQualityToggle = document.createElement('button');
-    highQualityToggle.id = 'highQualityToggle';
-    highQualityToggle.title = 'Alternar modo de alta qualidade';
-    highQualityToggle.innerHTML = '<i class="fas fa-glasses"></i> Alta Qualidade';
-    
-    // Add the toggle to container
-    qualityControlsContainer.appendChild(highQualityToggle);
-    
-    // Add container to modal
-    modal.appendChild(qualityControlsContainer);
-  }
-  
-  // Reset high quality mode state
-  isHighQualityMode = false;
-  originalSrc = imageUrl;
-  highQualitySrc = null;
-  
-  // Set appropriate classes based on initial state
-  highQualityToggle.classList.remove('active');
-  highQualityToggle.innerHTML = '<i class="fas fa-glasses"></i> Alta Qualidade';
-  
-  // Set up click handler for toggle
-  highQualityToggle.onclick = function(event) {
-    event.stopPropagation(); // Prevent closing modal
-    toggleHighQualityMode(modalImg, highQualityToggle);
-  };
-}
+// High quality mode functionality removed - images are now saved in original quality
 
-/**
- * Toggles between normal and high quality image modes
- * @param {HTMLImageElement} modalImg - The modal image element
- * @param {HTMLButtonElement} toggleButton - The high quality toggle button
- */
-function toggleHighQualityMode(modalImg, toggleButton) {
-  // Toggle state
-  isHighQualityMode = !isHighQualityMode;
-  
-  if (isHighQualityMode) {
-    // Show loading indicator
-    modalImg.classList.add('loading');
-    toggleButton.disabled = true;
-    toggleButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Carregando...';
-    
-    // If we haven't created the high quality version yet
-    if (!highQualitySrc) {
-      // Create high quality version - enhanced clarity with sharpening
-      createHighQualityVersion(originalSrc).then(enhancedSrc => {
-        highQualitySrc = enhancedSrc;
-        if (isHighQualityMode) { // Check state again in case user switched back quickly
-          modalImg.src = highQualitySrc;
-          toggleButton.innerHTML = '<i class="fas fa-glasses"></i> Modo Normal';
-          toggleButton.classList.add('active');
-        }
-        modalImg.classList.remove('loading');
-        toggleButton.disabled = false;
-      }).catch(error => {
-        console.error('Erro ao criar versão de alta qualidade:', error);
-        isHighQualityMode = false;
-        modalImg.src = originalSrc;
-        modalImg.classList.remove('loading');
-        toggleButton.disabled = false;
-        toggleButton.innerHTML = '<i class="fas fa-glasses"></i> Alta Qualidade';
-        toggleButton.classList.remove('active');
-        showToast('Não foi possível melhorar a qualidade da imagem', 'error');
-      });
-    } else {
-      // Use already created high quality version
-      modalImg.src = highQualitySrc;
-      modalImg.classList.remove('loading');
-      toggleButton.disabled = false;
-      toggleButton.innerHTML = '<i class="fas fa-glasses"></i> Modo Normal';
-      toggleButton.classList.add('active');
-    }
-  } else {
-    // Switch back to original version
-    modalImg.src = originalSrc;
-    toggleButton.innerHTML = '<i class="fas fa-glasses"></i> Alta Qualidade';
-    toggleButton.classList.remove('active');
-  }
-  
-  // Reset zoom after changing image
-  resetZoomState();
-}
+// High quality toggle functionality removed - images are now saved in original quality
 
-/**
- * Creates a high quality version of the image
- * @param {string} imageUrl - The original image URL
- * @returns {Promise<string>} A promise that resolves to the enhanced image URL
- */
-function createHighQualityVersion(imageUrl) {
-  return new Promise((resolve, reject) => {
-    try {
-      const img = new Image();
-      
-      img.onload = function() {
-        try {
-          // Create a canvas with the original image dimensions
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          // Set canvas size to match image, but at least 1200px wide for better quality
-          const targetWidth = Math.max(img.width, 1200);
-          const scale = targetWidth / img.width;
-          canvas.width = targetWidth;
-          canvas.height = img.height * scale;
-          
-          // Enable image smoothing for better upscaling
-          ctx.imageSmoothingEnabled = true;
-          ctx.imageSmoothingQuality = 'high';
-          
-          // Draw the image at the larger size
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          
-          // Apply sharpening filter for better clarity
-          applySharpening(ctx, canvas.width, canvas.height);
-          
-          // Convert to high quality JPEG
-          canvas.toBlob(blob => {
-            if (blob) {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result);
-              reader.onerror = err => reject(err);
-              reader.readAsDataURL(blob);
-            } else {
-              reject(new Error('Failed to create blob'));
-            }
-          }, 'image/jpeg', 0.95); // High quality setting
-        } catch (err) {
-          reject(err);
-        }
-      };
-      
-      img.onerror = () => reject(new Error('Failed to load image'));
-      
-      // Load the image
-      img.src = imageUrl;
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
+// High quality image creation functionality removed - images are now saved in original quality
 
-/**
- * Applies a sharpening filter to the canvas context
- * @param {CanvasRenderingContext2D} ctx - The canvas context
- * @param {number} width - The canvas width
- * @param {number} height - The canvas height
- */
-function applySharpening(ctx, width, height) {
-  try {
-    // Get image data
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const data = imageData.data;
-    
-    // Simple sharpening convolution
-    const sharpen = (data, width, height, factor = 0.5) => {
-      // Create a copy of the original data
-      const tempData = new Uint8ClampedArray(data);
-      
-      // Apply convolution to each pixel (except edges)
-      for (let y = 1; y < height - 1; y++) {
-        for (let x = 1; x < width - 1; x++) {
-          const idx = (y * width + x) * 4;
-          
-          // For each RGB channel (skip alpha)
-          for (let c = 0; c < 3; c++) {
-            const currentPixel = tempData[idx + c];
-            
-            // Get surrounding pixels
-            const top = tempData[idx - width * 4 + c];
-            const bottom = tempData[idx + width * 4 + c];
-            const left = tempData[idx - 4 + c];
-            const right = tempData[idx + 4 + c];
-            
-            // Apply sharpening: 5×center - surrounding pixels
-            const sharpened = 5 * currentPixel - top - bottom - left - right;
-            
-            // Blend original with sharpened using factor
-            data[idx + c] = Math.min(255, Math.max(0, 
-              currentPixel + (sharpened - currentPixel) * factor
-            ));
-          }
-        }
-      }
-    };
-    
-    // Apply sharpening
-    sharpen(data, width, height, 0.3);
-    
-    // Put the modified image data back
-    ctx.putImageData(imageData, 0, 0);
-  } catch (err) {
-    console.error('Error applying sharpening:', err);
-    // Continue without sharpening if there's an error
-  }
-} 
+// Sharpening functionality removed - images are now saved in original quality 

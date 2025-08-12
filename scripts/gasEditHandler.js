@@ -9,5 +9,5 @@ export function handleGasEditSubmit(event) {
   renderAnalytics();
   
   closeGasEditModal();
-  showToast('Registro de gasolina atualizado com sucesso!', 'success');
+  showToast('Gasto atualizado com sucesso!', 'success');
 } 
