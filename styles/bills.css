@@ -1,0 +1,292 @@
+/* Bills Tab Styles */
+
+.bills-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.bills-subtitle {
+  color: var(--text-secondary, #666);
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+/* Daily Budget Calculator */
+.daily-budget-calculator {
+  background: var(--bg-secondary, #f8f9fa);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border-color, #e9ecef);
+}
+
+.budget-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.budget-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e9ecef);
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.budget-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.budget-card.highlight {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+}
+
+.budget-card h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.budget-card.highlight h3 {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.budget-input-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.budget-input {
+  border: 2px solid var(--border-color, #e9ecef);
+  border-radius: 6px;
+  padding: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+  width: 120px;
+  transition: border-color 0.3s ease;
+}
+
+.budget-input:focus {
+  outline: none;
+  border-color: var(--primary-color, #007bff);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.budget-amount {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color, #007bff);
+}
+
+.budget-amount.large {
+  font-size: 2rem;
+  color: white;
+}
+
+.budget-card.highlight .budget-amount {
+  color: white;
+}
+
+/* Budget status indicators */
+.budget-card.negative-budget {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  color: white;
+  border: none;
+}
+
+.budget-card.low-budget {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+  border: none;
+}
+
+.budget-card.negative-budget h3,
+.budget-card.low-budget h3 {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.budget-card.negative-budget .budget-amount,
+.budget-card.low-budget .budget-amount {
+  color: white;
+}
+
+.currency {
+  font-size: 0.9em;
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+.budget-formula {
+  display: block;
+  margin-top: 0.5rem;
+  opacity: 0.8;
+  font-size: 0.85rem;
+}
+
+/* Bills Form Styles */
+#billsForm {
+  background: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border-color, #e9ecef);
+}
+
+#billsForm .form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+/* Bills Table Styles */
+.bills-table-container {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-color, #e9ecef);
+}
+
+#billsTableBody tr {
+  transition: background-color 0.2s ease;
+}
+
+#billsTableBody tr:hover {
+  background-color: var(--bg-tertiary, #f8f9fa);
+}
+
+/* Category badges */
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.category-moradia { background: #e3f2fd; color: #1976d2; }
+.category-transporte { background: #fff3e0; color: #f57c00; }
+.category-alimentacao { background: #e8f5e8; color: #388e3c; }
+.category-saude { background: #fce4ec; color: #c2185b; }
+.category-educacao { background: #f3e5f5; color: #7b1fa2; }
+.category-lazer { background: #fff8e1; color: #fbc02d; }
+.category-outros { background: #f5f5f5; color: #616161; }
+
+/* Due date indicators */
+.due-date {
+  font-weight: 600;
+}
+
+.due-soon {
+  color: #ff9800;
+  font-weight: 700;
+}
+
+.overdue {
+  color: #f44336;
+  font-weight: 700;
+}
+
+/* Action buttons */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.action-btn {
+  padding: 0.25rem 0.5rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.action-btn.edit {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.action-btn.edit:hover {
+  background: #1976d2;
+  color: white;
+}
+
+.action-btn.delete {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+.action-btn.delete:hover {
+  background: #d32f2f;
+  color: white;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .budget-summary {
+    grid-template-columns: 1fr;
+  }
+  
+  .budget-card {
+    padding: 1rem;
+  }
+  
+  .budget-amount {
+    font-size: 1.25rem;
+  }
+  
+  .budget-amount.large {
+    font-size: 1.5rem;
+  }
+  
+  #billsForm .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  
+  .action-btn {
+    width: 100%;
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .daily-budget-calculator {
+    padding: 1rem;
+  }
+  
+  .budget-card {
+    padding: 0.75rem;
+  }
+  
+  .budget-input {
+    width: 100px;
+    font-size: 1rem;
+  }
+  
+  .budget-amount {
+    font-size: 1.1rem;
+  }
+  
+  .budget-amount.large {
+    font-size: 1.3rem;
+  }
+} 

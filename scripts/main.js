@@ -14,6 +14,7 @@ import {
 } from './mobileOptimizations.js';
 // Import the base path utilities
 import { initializeBasePath, resolvePath } from './basePath.js';
+import { initializeBills } from './billsManager.js';
 
 // Ensure base path is initialized early
 initializeBasePath();
@@ -56,6 +57,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Inicializa o zoom de imagem
     initializeImageZoom();
+
+    // Inicializa o módulo de contas fixas
+    initializeBills();
 
     // Event listener para modal de exportação
     const exportBtn = document.getElementById('exportButton');
@@ -111,18 +115,21 @@ document.addEventListener('DOMContentLoaded', async () => {
  * Handles the clear all data button click
  */
 async function handleClearAllData() {
-  // Import the clearAllData function
+  // Import the clearAllData function and bills cleaner
   const { clearAllData } = await import('./export.js');
+  const { clearAllBills } = await import('./billsManager.js');
   
   // Show confirmation dialog with detailed warning
   const confirmed = confirm(
     '⚠️ ATENÇÃO: ESTA AÇÃO NÃO PODE SER DESFEITA!\n\n' +
-    'Isso irá APAGAR PERMANENTEMENTE:\n' +
-    '• Todos os pedidos registrados\n' +
-    '• Todos os gastos de gasolina\n' +
-    '• Todas as imagens anexadas\n' +
-    '• Todos os dados de análise\n' +
-    '• Todos os backups automáticos\n\n' +
+          'Isso irá APAGAR PERMANENTEMENTE:\n' +
+      '• Todos os pedidos registrados\n' +
+      '• Todos os gastos de gasolina\n' +
+      '• Todas as contas fixas\n' +
+      '• Renda mensal configurada\n' +
+      '• Todas as imagens anexadas\n' +
+      '• Todos os dados de análise\n' +
+      '• Todos os backups automáticos\n\n' +
     'Tem certeza absoluta que deseja continuar?\n\n' +
     'Recomendamos fazer uma exportação antes de limpar os dados.'
   );
@@ -142,6 +149,9 @@ async function handleClearAllData() {
         
         // Call the clearAllData function
         await clearAllData();
+        
+        // Clear bills data
+        clearAllBills();
         
         console.log('✅ Limpeza completa de dados concluída');
         

@@ -181,11 +181,27 @@ export function saveGasEntries() {
     updateGasTable();
     updateTotals();
     
+    // Update bills budget calculator when gas entries change
+    updateBillsBudgetCalculator();
+    
     // Notificar outras abas sobre a mudança
     notifyDataChange('gasEntries');
   } catch (error) {
     console.error('Erro ao salvar registros de gasolina:', error);
     showToast('Erro ao salvar registros de gasolina', 'error');
+  }
+}
+
+/**
+ * Updates the bills budget calculator when gas entries change
+ */
+async function updateBillsBudgetCalculator() {
+  try {
+    const { updateBudgetFromGasChanges } = await import('./billsManager.js');
+    updateBudgetFromGasChanges();
+  } catch (error) {
+    // Bills module may not be loaded yet, that's okay
+    console.log('Bills module not available for budget update');
   }
 }
 
