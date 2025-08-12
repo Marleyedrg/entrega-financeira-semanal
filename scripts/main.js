@@ -110,9 +110,8 @@ document.addEventListener('DOMContentLoaded', async () => {
  * Handles the clear all data button click
  */
 async function handleClearAllData() {
-  // Import the clearAllData function and bills cleaner
+  // Import the clearAllData function (bills data will be preserved)
   const { clearAllData } = await import('./export.js');
-  const { clearAllBills } = await import('./billsManager.js');
   
   // Show confirmation dialog with detailed warning
   const confirmed = confirm(
@@ -120,11 +119,11 @@ async function handleClearAllData() {
           'Isso irá APAGAR PERMANENTEMENTE:\n' +
       '• Todos os pedidos registrados\n' +
       '• Todos os gastos de gasolina\n' +
-      '• Todas as contas fixas\n' +
-      '• Renda mensal configurada\n' +
       '• Todas as imagens anexadas\n' +
       '• Todos os dados de análise\n' +
       '• Todos os backups automáticos\n\n' +
+      '✅ OS DADOS DA ABA "CONTAS FIXAS" SERÃO PRESERVADOS\n' +
+      '(Renda mensal e contas cadastradas não serão apagadas)\n\n' +
     'Tem certeza absoluta que deseja continuar?\n\n' +
     'Recomendamos fazer uma exportação antes de limpar os dados.'
   );
@@ -140,18 +139,18 @@ async function handleClearAllData() {
     
     if (doubleConfirmed) {
       try {
-        console.log('🗑️ Iniciando limpeza completa de dados...');
+        console.log('🗑️ Iniciando limpeza de dados (preservando Contas Fixas)...');
         
-        // Call the clearAllData function
+        // Call the clearAllData function (bills data will be preserved automatically)
         await clearAllData();
         
-        // Clear bills data
-        clearAllBills();
-        
-        console.log('✅ Limpeza completa de dados concluída');
+        console.log('✅ Limpeza de dados concluída (Contas Fixas preservadas)');
         
         // Show success message
-        alert('✅ Todos os dados foram limpos com sucesso!\n\nA página será recarregada para refletir as mudanças.');
+        alert('✅ Dados limpos com sucesso!\n\n' +
+              '• Pedidos e gastos foram apagados\n' +
+              '• Contas Fixas foram preservadas\n\n' +
+              'A página será recarregada para refletir as mudanças.');
         
         // Reload the page to show clean state
         window.location.reload();

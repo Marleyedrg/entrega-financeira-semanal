@@ -129,17 +129,17 @@ export function backupData(includeGas = true) {
   }
 }
 
-// Função para limpar todos os dados
+// Função para limpar dados (preservando Contas Fixas)
 export function clearAllData() {
-  if (!confirm('Tem certeza que deseja limpar todos os dados? Esta ação não pode ser desfeita.')) {
+  if (!confirm('Tem certeza que deseja limpar os dados? Esta ação não pode ser desfeita.\n\nOS DADOS DAS CONTAS FIXAS SERÃO PRESERVADOS.')) {
     return;
   }
   
   try {
-    // Perform complete data cleanup - clearing all browser storage
+    // Perform data cleanup - preserving bills data
     performCompleteDataCleanup();
     
-    showToast('Todos os dados foram limpos com sucesso!', 'success');
+    showToast('Dados limpos com sucesso! Contas Fixas preservadas.', 'success');
   } catch (error) {
     console.error('Erro ao limpar dados:', error);
     showToast(error.message, 'error');
@@ -147,16 +147,31 @@ export function clearAllData() {
 }
 
 /**
- * Performs a complete data cleanup, removing all data from browser storage
- * and resetting application state
+ * Performs data cleanup, removing deliveries and gas entries from browser storage
+ * while preserving bills and monthly income data, and resetting application state
  */
 function performCompleteDataCleanup() {
-  console.log('🧹 Iniciando limpeza completa de dados...');
+  console.log('🧹 Iniciando limpeza de dados (preservando Contas Fixas)...');
   
   try {
+    // Preserve bills data before clearing localStorage
+    console.log('🧹 Preservando dados das Contas Fixas...');
+    const billsData = localStorage.getItem('bills');
+    const monthlyIncomeData = localStorage.getItem('monthlyIncome');
+    
     // Clear localStorage
     console.log('🧹 Limpando localStorage...');
     localStorage.clear();
+    
+    // Restore preserved bills data
+    if (billsData) {
+      localStorage.setItem('bills', billsData);
+      console.log('✅ Dados das contas fixas restaurados');
+    }
+    if (monthlyIncomeData) {
+      localStorage.setItem('monthlyIncome', monthlyIncomeData);
+      console.log('✅ Renda mensal restaurada');
+    }
     
     // Clear sessionStorage
     console.log('🧹 Limpando sessionStorage...');
