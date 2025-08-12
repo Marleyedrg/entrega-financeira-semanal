@@ -230,6 +230,17 @@ input[type="submit"].outline:hover {
     border: 1px solid var(--sepia-border);
 }
 
+.footer-buttons .button.outline.danger {
+    color: #dc3545;
+    border-color: #dc3545;
+}
+
+.footer-buttons .button.outline.danger:hover {
+    background-color: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
 .footer-buttons .button.danger {
     background-color: var(--sepia-error);
     color: white;
