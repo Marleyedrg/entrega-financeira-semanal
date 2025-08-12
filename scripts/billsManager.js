@@ -282,14 +282,51 @@ function updateBudgetCalculator() {
   });
   
   const totalMonthlyExpenses = currentMonthGasEntries.reduce((sum, entry) => sum + parseFloat(entry.amount || 0), 0);
-  const averageDailyExpenses = currentMonthGasEntries.length > 0 ? totalMonthlyExpenses / currentMonthGasEntries.length : 0;
   
-  // Calculate available amount after bills and current expenses pattern
+  // Calculate base daily budget (without excess distribution)
   const availableAmount = monthlyIncome - totalBills;
+  const baseDailyBudget = availableAmount > 0 ? availableAmount / daysInMonth : 0;
+  
+  // Calculate excess distribution for daily budget adjustment
+  let totalExcess = 0;
+  let daysWithExcess = 0;
+  
+  // Group expenses by day to identify daily excesses
+  const expensesByDay = {};
+  currentMonthGasEntries.forEach(entry => {
+    const entryDate = entry.date;
+    if (!expensesByDay[entryDate]) {
+      expensesByDay[entryDate] = 0;
+    }
+    expensesByDay[entryDate] += parseFloat(entry.amount || 0);
+  });
+  
+  // Calculate total excess from days that exceeded the base daily budget
+  Object.values(expensesByDay).forEach(dailyTotal => {
+    if (dailyTotal > baseDailyBudget) {
+      const excess = dailyTotal - baseDailyBudget;
+      totalExcess += excess;
+      daysWithExcess++;
+    }
+  });
+  
+  // Get current day of month and calculate remaining days
+  const today = new Date();
+  const currentDay = today.getDate();
+  const isCurrentMonth = today.getMonth() === currentMonth && today.getFullYear() === currentYear;
+  const remainingDaysInMonth = isCurrentMonth ? daysInMonth - currentDay + 1 : daysInMonth;
+  
+  // Distribute the total excess over remaining days in the month
+  const dailyExcessReduction = remainingDaysInMonth > 0 ? totalExcess / remainingDaysInMonth : 0;
+  
+  // Calculate the adjusted daily budget
+  const adjustedDailyBudget = Math.max(0, baseDailyBudget - dailyExcessReduction);
+  
+  // For display purposes, keep the old calculation as well
+  const averageDailyExpenses = currentMonthGasEntries.length > 0 ? totalMonthlyExpenses / currentMonthGasEntries.length : 0;
   const projectedMonthlyExpenses = averageDailyExpenses * daysInMonth;
   const remainingBudget = availableAmount - projectedMonthlyExpenses;
-  const dailyBudget = availableAmount > 0 ? availableAmount / daysInMonth : 0;
-  const adjustedDailyBudget = remainingBudget > 0 ? remainingBudget / daysInMonth : 0;
+  const dailyBudget = baseDailyBudget;
   
   // Update display
   if (totalBillsElement) {
@@ -309,18 +346,17 @@ function updateBudgetCalculator() {
   }
   
   if (dailyBudgetElement) {
-    // Show the adjusted daily budget that considers current expenses
-    const displayBudget = adjustedDailyBudget > 0 ? adjustedDailyBudget : dailyBudget;
-    dailyBudgetElement.textContent = displayBudget.toFixed(2);
+    // Always show the adjusted daily budget with excess distribution
+    dailyBudgetElement.textContent = adjustedDailyBudget.toFixed(2);
     
     // Add visual feedback based on budget
     const budgetCard = dailyBudgetElement.closest('.budget-card');
     if (budgetCard) {
       budgetCard.classList.remove('negative-budget', 'low-budget');
       
-      if (availableAmount < 0 || remainingBudget < 0) {
+      if (availableAmount < 0 || adjustedDailyBudget <= 0) {
         budgetCard.classList.add('negative-budget');
-      } else if (displayBudget < 20) {
+      } else if (adjustedDailyBudget < 20) {
         budgetCard.classList.add('low-budget');
       }
     }
@@ -330,16 +366,56 @@ function updateBudgetCalculator() {
     daysInMonthElement.textContent = daysInMonth;
   }
   
-  // Update formula text to show integration with expenses
-  const formulaElement = document.querySelector('.budget-formula');
-  if (formulaElement && currentMonthGasEntries.length > 0) {
-    formulaElement.innerHTML = `
-      (Renda - Contas - Gastos Médios) ÷ <span id="daysInMonth">${daysInMonth}</span> dias<br>
-      <small style="opacity: 0.7;">Baseado em ${currentMonthGasEntries.length} gastos este mês</small>
-    `;
+  // Update excess distribution info
+  const excessInfoElement = document.getElementById('excessInfo');
+  const totalExcessElement = document.getElementById('totalExcess');
+  const remainingDaysElement = document.getElementById('remainingDays');
+  const dailyReductionElement = document.getElementById('dailyReduction');
+  
+  if (excessInfoElement) {
+    if (totalExcess > 0) {
+      excessInfoElement.style.display = 'block';
+      
+      if (totalExcessElement) {
+        totalExcessElement.textContent = `R$ ${totalExcess.toFixed(2)}`;
+      }
+      
+      if (remainingDaysElement) {
+        remainingDaysElement.textContent = `${remainingDaysInMonth} dias`;
+      }
+      
+      if (dailyReductionElement) {
+        dailyReductionElement.textContent = `R$ ${dailyExcessReduction.toFixed(2)}`;
+      }
+    } else {
+      excessInfoElement.style.display = 'none';
+    }
   }
   
-  console.log(`💰 Budget calculated: Income R$${monthlyIncome}, Bills R$${totalBills}, Monthly Expenses R$${totalMonthlyExpenses.toFixed(2)} (${currentMonthGasEntries.length} entries), Adjusted Daily Budget R$${displayBudget.toFixed(2)}`);
+  // Update formula text to show the new excess distribution logic
+  const formulaElement = document.querySelector('.budget-formula');
+  if (formulaElement) {
+    if (totalExcess > 0) {
+      formulaElement.innerHTML = `
+        (Renda - Contas) ÷ ${daysInMonth} - (Excesso ÷ ${remainingDaysInMonth} dias restantes)<br>
+        <small style="opacity: 0.7;">Excesso de R$${totalExcess.toFixed(2)} distribuído nos próximos ${remainingDaysInMonth} dias</small>
+      `;
+    } else if (currentMonthGasEntries.length > 0) {
+      formulaElement.innerHTML = `
+        (Renda - Contas) ÷ <span id="daysInMonth">${daysInMonth}</span> dias<br>
+        <small style="opacity: 0.7;">Sem excesso diário - baseado em ${currentMonthGasEntries.length} gastos este mês</small>
+      `;
+    } else {
+      formulaElement.innerHTML = `
+        (Renda - Contas) ÷ <span id="daysInMonth">${daysInMonth}</span> dias<br>
+        <small style="opacity: 0.7;">Orçamento base - nenhum gasto registrado este mês</small>
+      `;
+    }
+  }
+  
+  console.log(`💰 Budget calculated: Income R$${monthlyIncome}, Bills R$${totalBills}, Monthly Expenses R$${totalMonthlyExpenses.toFixed(2)} (${currentMonthGasEntries.length} entries)`);
+  console.log(`📊 Base Daily Budget: R$${baseDailyBudget.toFixed(2)}, Total Excess: R$${totalExcess.toFixed(2)}, Daily Reduction: R$${dailyExcessReduction.toFixed(2)}`);
+  console.log(`🎯 Final Adjusted Daily Budget: R$${adjustedDailyBudget.toFixed(2)} (${remainingDaysInMonth} days remaining)`);
   
   // Force update of elements even if they weren't found initially
   setTimeout(() => {
@@ -354,8 +430,7 @@ function updateBudgetCalculator() {
     }
     
     if (delayedDailyBudgetElement && !dailyBudgetElement) {
-      const displayBudget = adjustedDailyBudget > 0 ? adjustedDailyBudget : dailyBudget;
-      delayedDailyBudgetElement.textContent = displayBudget.toFixed(2);
+      delayedDailyBudgetElement.textContent = adjustedDailyBudget.toFixed(2);
       console.log('✅ Updated daily budget element (delayed)');
     }
     
