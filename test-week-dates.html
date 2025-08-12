@@ -56,7 +56,7 @@
         <p>Os botões mostram:</p>
         <ul>
             <li><strong>Hoje</strong> - Data atual</li>
-            <li><strong>Demais dias</strong> - Os últimos 6 dias em ordem decrescente (ontem, anteontem, etc.)</li>
+            <li><strong>Demais dias</strong> - Os últimos 7 dias em ordem decrescente (ontem, anteontem, etc.)</li>
         </ul>
         
         <h3>Exemplo:</h3>
@@ -95,9 +95,9 @@
                 value: getCurrentDate()
             });
             
-            // Add the last 6 days in descending order (yesterday, day before yesterday, etc.)
-            // This gives us the most recent occurrence of each day going backwards
-            for (let i = 1; i <= 6; i++) {
+            // Add the last 7 days in descending order (yesterday, day before yesterday, etc.)
+            // This ensures we get a full week of previous days
+            for (let i = 1; i <= 7; i++) {
                 const date = getDateOffset(-i);
                 const dateObj = new Date(date + 'T00:00:00');
                 const dayOfWeek = dateObj.getDay();
@@ -139,15 +139,16 @@
         function generateExampleButtons() {
             const exampleContainer = document.getElementById('example-buttons');
             
-            // Simulate it's Monday, December 16, 2024
+            // Simulate it's Tuesday, August 12, 2025 (based on current system date)
             const exampleDates = [
-                { label: 'Hoje', date: '16/12/2024', isToday: true },
-                { label: 'Domingo', date: '15/12/2024', isToday: false },
-                { label: 'Sábado', date: '14/12/2024', isToday: false },
-                { label: 'Sexta', date: '13/12/2024', isToday: false },
-                { label: 'Quinta', date: '12/12/2024', isToday: false },
-                { label: 'Quarta', date: '11/12/2024', isToday: false },
-                { label: 'Terça', date: '10/12/2024', isToday: false }
+                { label: 'Hoje', date: '12/08/2025', isToday: true },
+                { label: 'Segunda', date: '11/08/2025', isToday: false },
+                { label: 'Domingo', date: '10/08/2025', isToday: false },
+                { label: 'Sábado', date: '09/08/2025', isToday: false },
+                { label: 'Sexta', date: '08/08/2025', isToday: false },
+                { label: 'Quinta', date: '07/08/2025', isToday: false },
+                { label: 'Quarta', date: '06/08/2025', isToday: false },
+                { label: 'Terça', date: '05/08/2025', isToday: false }
             ];
             
             exampleDates.forEach(item => {

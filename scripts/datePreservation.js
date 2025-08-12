@@ -229,9 +229,9 @@ function getWeekDates() {
     value: getCurrentDate()
   });
   
-  // Add the last 6 days in descending order (yesterday, day before yesterday, etc.)
-  // This gives us the most recent occurrence of each day going backwards
-  for (let i = 1; i <= 6; i++) {
+  // Add the last 7 days in descending order (yesterday, day before yesterday, etc.)
+  // This ensures we get a full week of previous days
+  for (let i = 1; i <= 7; i++) {
     const date = getDateOffset(-i);
     const dateObj = new Date(date + 'T00:00:00');
     const dayOfWeek = dateObj.getDay();
