@@ -1,0 +1,33 @@
+/* 
+ * Professional Dashboard CSS - Placeholder file
+ * Este arquivo foi criado para resolver erros 404 de carregamento
+ * Pode ter sido referenciado em versões anteriores do projeto
+ */
+
+/* Estilos profissionais de dashboard se necessário */
+.professional-dashboard {
+  /* Placeholder styles */
+}
+
+.dashboard-header {
+  /* Header styles */
+}
+
+.dashboard-content {
+  /* Content styles */
+}
+
+.dashboard-sidebar {
+  /* Sidebar styles */
+}
+
+.dashboard-widget {
+  /* Widget styles */
+}
+
+/* Estilos responsivos para dashboard */
+@media (max-width: 768px) {
+  .professional-dashboard {
+    /* Mobile responsive styles */
+  }
+} 

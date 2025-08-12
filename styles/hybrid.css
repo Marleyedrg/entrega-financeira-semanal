@@ -1,0 +1,25 @@
+/* 
+ * Hybrid CSS - Placeholder file
+ * Este arquivo foi criado para resolver erros 404 de carregamento
+ * Pode ter sido referenciado em versões anteriores do projeto
+ */
+
+/* Estilos híbridos básicos se necessário */
+.hybrid-container {
+  /* Placeholder styles */
+}
+
+/* Compatibilidade com temas escuros e claros */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --hybrid-bg: #1a1a1a;
+    --hybrid-text: #ffffff;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --hybrid-bg: #ffffff;
+    --hybrid-text: #000000;
+  }
+} 
