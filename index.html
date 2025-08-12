@@ -459,7 +459,7 @@
     <!-- Rodapé com opção de limpeza de dados -->
     <footer class="footer">
         <div class="footer-buttons">
-            <button id="exportButton" class="button outline">
+            <button id="exportButton" class="button outline" onclick="handleExportClick()">
                 <i class="fas fa-file-export"></i>
                 Exportar
             </button>
@@ -467,7 +467,7 @@
                 <i class="fas fa-stethoscope diagnostic-icon"></i>
                 Diagnóstico de Dados
             </button>
-            <button id="clearAllDataButton" class="button outline danger">
+            <button id="clearAllDataButton" class="button outline danger" onclick="handleClearAllDataClick()">
                 <i class="fas fa-trash-alt"></i>
                 Limpar Todos os Dados
             </button>

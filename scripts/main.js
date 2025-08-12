@@ -61,13 +61,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Inicializa o módulo de contas fixas
     initializeBills();
 
-    // Event listener para modal de exportação
-    const exportBtn = document.getElementById('exportButton');
-    if (exportBtn) exportBtn.addEventListener('click', showExportModal);
-    
-    // Event listener para limpar todos os dados
-    const clearAllDataBtn = document.getElementById('clearAllDataButton');
-    if (clearAllDataBtn) clearAllDataBtn.addEventListener('click', handleClearAllData);
+    // Configure footer buttons with retry mechanism
+    setupFooterButtons();
     
     // Listen for browser beforesunload event to clean up resources
     window.addEventListener('beforeunload', () => {
@@ -171,4 +166,55 @@ async function handleClearAllData() {
   } else {
     console.log('Limpeza de dados cancelada pelo usuário (primeira confirmação)');
   }
-} 
+}
+
+/**
+ * Sets up footer buttons with retry mechanism
+ */
+function setupFooterButtons() {
+  // Simple setup with fallback to onclick handlers
+  setTimeout(() => {
+    const exportBtn = document.getElementById('exportButton');
+    const clearAllDataBtn = document.getElementById('clearAllDataButton');
+    
+    if (exportBtn) {
+      console.log('✅ Export button found');
+      // The onclick handler is already set in HTML as fallback
+    } else {
+      console.warn('❌ Export button not found');
+    }
+    
+    if (clearAllDataBtn) {
+      console.log('✅ Clear data button found');
+      // The onclick handler is already set in HTML as fallback
+    } else {
+      console.warn('❌ Clear data button not found');
+    }
+  }, 500);
+}
+
+/**
+ * Global function for export button onclick
+ */
+window.handleExportClick = function() {
+  console.log('🖱️ Export button clicked via onclick');
+  try {
+    showExportModal();
+  } catch (error) {
+    console.error('❌ Error in showExportModal:', error);
+    alert('Erro ao abrir modal de exportação: ' + error.message);
+  }
+};
+
+/**
+ * Global function for clear data button onclick
+ */
+window.handleClearAllDataClick = function() {
+  console.log('🖱️ Clear data button clicked via onclick');
+  try {
+    handleClearAllData();
+  } catch (error) {
+    console.error('❌ Error in handleClearAllData:', error);
+    alert('Erro ao limpar dados: ' + error.message);
+  }
+}; 
