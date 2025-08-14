@@ -319,16 +319,34 @@ function initializeApp() {
     setAppHeight();
   });
   
+  // Check if data clearing is in progress before initialization
+  if (sessionStorage.getItem('dataClearing') === 'true') {
+    console.log('⏸️ Inicialização pausada - aguardando conclusão da limpeza de dados');
+    // Wait for clearing to complete before initializing
+    const waitForClearingComplete = () => {
+      if (sessionStorage.getItem('dataClearing') !== 'true') {
+        console.log('✅ Limpeza concluída, retomando inicialização');
+        setTimeout(() => initializeApp(), 100);
+      } else {
+        setTimeout(waitForClearingComplete, 500);
+      }
+    };
+    waitForClearingComplete();
+    return;
+  }
+  
   // Verificar integridade dos dados ao iniciar
   checkDataIntegrity();
   
   // Verificar e reparar problemas de integridade automaticamente
   checkDataIntegrityOnStartup();
   
-  // Carregar dados
-  loadDeliveries();
-  loadGasEntries();
-  updateTotals();
+  // Carregar dados apenas se não estiver em processo de limpeza
+  if (sessionStorage.getItem('dataClearing') !== 'true') {
+    loadDeliveries();
+    loadGasEntries();
+    updateTotals();
+  }
   
   // Inicializar sistema de sincronização
   initializeSync();
@@ -337,8 +355,10 @@ function initializeApp() {
   const syncStatus = initializeSync();
   console.log('Sistema de sincronização inicializado:', syncStatus.sessionId);
   
-  // Carrega dados do localStorage
-  initializeData();
+  // Carrega dados do localStorage apenas se não estiver limpando
+  if (sessionStorage.getItem('dataClearing') !== 'true') {
+    initializeData();
+  }
   
   // Garante que todas as entregas têm status definidos
   deliveries.forEach(delivery => {
@@ -346,7 +366,11 @@ function initializeApp() {
       delivery.status = parseFloat(delivery.fee) > 0 ? 'completed' : 'pending';
     }
   });
-  saveDeliveries();
+  
+  // Only save if not clearing
+  if (sessionStorage.getItem('dataClearing') !== 'true') {
+    saveDeliveries();
+  }
   
   // Configura formulários
   setupOrderForm();
@@ -376,8 +400,7 @@ function initializeApp() {
   const closeButton = document.querySelector('.close');
   if (closeButton) {
     closeButton.addEventListener('click', () => {
-      const modal = document.getElementById('imageModal');
-      if (modal) modal.style.display = 'none';
+      closeImageModal();
     });
   }
   

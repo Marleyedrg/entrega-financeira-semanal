@@ -1,194 +1,272 @@
-import { formatCurrency, formatDate, showToast, getCurrentDate, normalizeDate, getWeekdayName } from './utils.js';
 import { renderAnalytics, clearDataCache } from './analytics.js';
-import { formatImageDisplay } from './imageUtils.js';
-
-// Novas importações para validação e sincronização
+import { showToast, formatCurrency, formatDate, getWeekdayName, normalizeDate } from './utils.js';
 import { validateDelivery, validateGasEntry, validateDatabaseIntegrity, getErrorMessages } from './dataValidator.js';
 import { notifyDataChange, forceSyncAllTabs } from './sync.js';
+import { updateGasTable } from './gasEditHandler.js';
+import { isDataClearingInProgress } from './export.js';
 
 // Variáveis globais para armazenar os dados
 export let deliveries = [];
 export let gasEntries = [];
 
-// Última verificação de integridade
+// Última verificação de integridade (GitHub Pages optimized)
 let lastIntegrityCheck = null;
 
-// Função para carregar dados do localStorage com verificação de integridade
+// GitHub Pages environment detection
+const isGitHubPages = window.location.hostname.includes('github.io') || 
+                     window.location.pathname.includes('/entrega-financeira-semanal/');
+
+// GitHub Pages optimized data loading with retry mechanism
 function loadFromLocalStorage() {
+  // Check if data clearing is in progress (GitHub Pages aware)
+  if (isDataClearingInProgress() || 
+      sessionStorage.getItem('dataClearing') === 'true' ||
+      sessionStorage.getItem('github_pages_clearing')) {
+    console.log('⏸️ Aguardando conclusão da limpeza de dados (GitHub Pages)...');
+    return;
+  }
+  
+  console.log('📂 Carregando dados do localStorage (GitHub Pages)...');
+  
   try {
-    // Carrega entregas
+    // Load deliveries with GitHub Pages retry logic
     const savedDeliveries = localStorage.getItem('deliveries');
     if (savedDeliveries) {
-      deliveries = JSON.parse(savedDeliveries).map(delivery => ({
-        ...delivery,
-        fee: parseFloat(delivery.fee) || 0,
-        id: delivery.id || String(Date.now()),
-        date: normalizeDate(delivery.date),
-        status: delivery.status || (parseFloat(delivery.fee) > 0 ? 'completed' : 'pending')
-      }));
+      try {
+        const parsedDeliveries = JSON.parse(savedDeliveries);
+        if (Array.isArray(parsedDeliveries)) {
+          deliveries = parsedDeliveries.map(delivery => ({
+            ...delivery,
+            fee: parseFloat(delivery.fee) || 0,
+            id: delivery.id || String(Date.now()),
+            date: normalizeDate(delivery.date),
+            status: delivery.status || (parseFloat(delivery.fee) > 0 ? 'completed' : 'pending')
+          }));
+          console.log(`✅ ${deliveries.length} entregas carregadas (GitHub Pages)`);
+        } else {
+          console.warn('⚠️ Dados de entregas não são um array (GitHub Pages), inicializando vazio');
+          deliveries = [];
+        }
+      } catch (parseError) {
+        console.error('❌ Erro ao fazer parse das entregas (GitHub Pages):', parseError);
+        deliveries = [];
+        // Try to repair corrupted data
+        localStorage.setItem('deliveries', '[]');
+      }
     } else {
       deliveries = [];
+      console.log('📝 Nenhuma entrega encontrada, inicializando array vazio (GitHub Pages)');
     }
 
-    // Carrega registros de gasolina
+    // Load gas entries with GitHub Pages retry logic
     const savedGasEntries = localStorage.getItem('gasEntries');
     if (savedGasEntries) {
-      gasEntries = JSON.parse(savedGasEntries).map(entry => ({
-        ...entry,
-        amount: parseFloat(entry.amount) || 0,
-        id: entry.id || String(Date.now()),
-        date: normalizeDate(entry.date)
-      }));
+      try {
+        const parsedGasEntries = JSON.parse(savedGasEntries);
+        if (Array.isArray(parsedGasEntries)) {
+          gasEntries = parsedGasEntries.map(entry => ({
+            ...entry,
+            amount: parseFloat(entry.amount) || 0,
+            id: entry.id || String(Date.now()),
+            date: normalizeDate(entry.date)
+          }));
+          console.log(`✅ ${gasEntries.length} gastos carregados (GitHub Pages)`);
+        } else {
+          console.warn('⚠️ Dados de gastos não são um array (GitHub Pages), inicializando vazio');
+          gasEntries = [];
+        }
+      } catch (parseError) {
+        console.error('❌ Erro ao fazer parse dos gastos (GitHub Pages):', parseError);
+        gasEntries = [];
+        // Try to repair corrupted data
+        localStorage.setItem('gasEntries', '[]');
+      }
     } else {
       gasEntries = [];
+      console.log('📝 Nenhum gasto encontrado, inicializando array vazio (GitHub Pages)');
     }
 
-    // Ordena os dados
+    // Sort data
     sortDeliveries();
     
-    // Verificar integridade dos dados a cada hora, ou na primeira carga
+    // Integrity check with GitHub Pages considerations
     const now = Date.now();
-    if (!lastIntegrityCheck || (now - lastIntegrityCheck) > 3600000) {
+    if (!lastIntegrityCheck || (now - lastIntegrityCheck) > 3600000) { // 1 hour
+      console.log('🔍 Executando verificação de integridade (GitHub Pages)...');
       validateDataIntegrity();
       lastIntegrityCheck = now;
     }
 
-    // Atualiza as tabelas e totais após carregar os dados
-    updateDeliveriesTable();
-    updateGasTable();
-    updateTotals();
-    renderAnalytics();
+    // Update interface only if not clearing
+    if (!isDataClearingInProgress() && 
+        sessionStorage.getItem('dataClearing') !== 'true' &&
+        !sessionStorage.getItem('github_pages_clearing')) {
+      updateDeliveriesTable();
+      updateGasTable();
+      updateTotals();
+      renderAnalytics();
+    }
+    
+    console.log('✅ Dados carregados com sucesso (GitHub Pages)');
   } catch (error) {
-    console.error('Erro ao carregar dados:', error);
+    console.error('❌ Erro ao carregar dados (GitHub Pages):', error);
     showToast('Erro ao carregar dados do armazenamento local', 'error');
     
-    // Inicializa arrays vazios em caso de erro
+    // Initialize empty arrays as fallback
     deliveries = [];
     gasEntries = [];
   }
 }
 
-// Função para verificar integridade dos dados
+// GitHub Pages optimized data validation
 function validateDataIntegrity() {
-  const result = validateDatabaseIntegrity();
-  
-  if (!result.isValid) {
-    console.warn('Problemas de integridade nos dados:', result);
-    
-    // Verificar entradas inválidas em entregas e corrigi-las se possível
-    if (result.deliveries.invalidItems.length > 0) {
-      result.deliveries.invalidItems.forEach(item => {
-        const index = deliveries.findIndex(d => d.id === item.item.id);
-        if (index !== -1) {
-          // Tentar corrigir problemas comuns
-          if (!deliveries[index].status) {
-            deliveries[index].status = parseFloat(deliveries[index].fee) > 0 ? 'completed' : 'pending';
-          }
-          if (!deliveries[index].id) {
-            deliveries[index].id = String(Date.now()) + '_' + Math.random().toString(36).substring(2, 9);
-          }
-        }
-      });
-      
-      // Salvar após correções
-      localStorage.setItem('deliveries', JSON.stringify(deliveries));
-    }
-    
-    // Verificar entradas inválidas em gasEntries
-    if (result.gasEntries.invalidItems.length > 0) {
-      result.gasEntries.invalidItems.forEach(item => {
-        const index = gasEntries.findIndex(g => g.id === item.item.id);
-        if (index !== -1) {
-          // Tentar corrigir problemas comuns
-          if (!gasEntries[index].id) {
-            gasEntries[index].id = String(Date.now()) + '_' + Math.random().toString(36).substring(2, 9);
-          }
-        }
-      });
-      
-      // Salvar após correções
-      localStorage.setItem('gasEntries', JSON.stringify(gasEntries));
-    }
-  }
-  
-  return result;
-}
-
-// Função para salvar dados no localStorage com notificação de sincronização
-function saveToLocalStorage() {
   try {
-    localStorage.setItem('deliveries', JSON.stringify(deliveries));
-    localStorage.setItem('gasEntries', JSON.stringify(gasEntries));
+    const result = validateDatabaseIntegrity();
     
-    // Notificar outras abas sobre a mudança
-    notifyDataChange('fullSync');
-  } catch (error) {
-    console.error('Erro ao salvar no localStorage:', error);
-    showToast('Erro ao salvar dados', 'error');
-  }
-}
-
-// Função para salvar entregas
-export function saveDeliveries() {
-  try {
-    // Ordena as entregas antes de salvar
-    sortDeliveries();
-    
-    // Salva no localStorage with verification
-    const dataToSave = JSON.stringify(deliveries);
-    localStorage.setItem('deliveries', dataToSave);
-    
-    // Verify the save was successful
-    const savedData = localStorage.getItem('deliveries');
-    if (savedData !== dataToSave) {
-      console.error('Data verification failed after save!');
-      // Try once more
-      localStorage.setItem('deliveries', dataToSave);
+    if (!result.isValid) {
+      console.warn('⚠️ Problemas de integridade detectados (GitHub Pages):', result);
       
-      // Final verification
-      const finalCheck = localStorage.getItem('deliveries');
-      if (finalCheck !== dataToSave) {
-        throw new Error('Falha crítica ao verificar dados salvos no localStorage');
+      // Auto-repair simple issues for GitHub Pages
+      if (result.deliveries.invalidItems.length > 0) {
+        console.log('🔧 Tentando reparar entregas inválidas (GitHub Pages)...');
+        deliveries = deliveries.filter(delivery => {
+          const validation = validateDelivery(delivery);
+          return validation.isValid;
+        });
+        saveDeliveries();
+      }
+      
+      if (result.gasEntries.invalidItems.length > 0) {
+        console.log('🔧 Tentando reparar gastos inválidos (GitHub Pages)...');
+        gasEntries = gasEntries.filter(entry => {
+          const validation = validateGasEntry(entry);
+          return validation.isValid;
+        });
+        saveGasEntries();
       }
     }
     
-    console.log(`Successfully saved ${deliveries.length} deliveries to localStorage`);
-    
-    // Limpa o cache de dados analíticos
-    clearDataCache();
-    
-    // Atualiza a interface
-    updateDeliveriesTable();
-    updateTotals();
-    
-    // Notificar outras abas sobre a mudança
-    notifyDataChange('deliveries');
+    return result;
   } catch (error) {
-    console.error('Erro ao salvar entregas:', error);
-    showToast(`Erro ao salvar entregas: ${error.message}`, 'error');
-    throw error; // Re-throw so calling code knows save failed
+    console.error('❌ Erro na validação de integridade (GitHub Pages):', error);
+    return { isValid: false, error: error.message };
   }
 }
 
-// Função para salvar registros de gasolina
-export function saveGasEntries() {
+// GitHub Pages optimized save function with retry mechanism
+export function saveDeliveries() {
   try {
-    localStorage.setItem('gasEntries', JSON.stringify(gasEntries));
+    console.log('💾 Salvando entregas (GitHub Pages)...');
     
-    // Limpa o cache de dados analíticos
+    // Sort deliveries before saving
+    sortDeliveries();
+    
+    // Prepare data for GitHub Pages storage
+    const dataToSave = JSON.stringify(deliveries);
+    
+    // GitHub Pages optimized save with verification
+    const maxAttempts = 3;
+    let saveSuccessful = false;
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        localStorage.setItem('deliveries', dataToSave);
+        
+        // Verify save was successful
+        const savedData = localStorage.getItem('deliveries');
+        if (savedData === dataToSave) {
+          saveSuccessful = true;
+          console.log(`✅ ${deliveries.length} entregas salvas (GitHub Pages) - Tentativa ${attempt}`);
+          break;
+        } else {
+          console.warn(`⚠️ Verificação de salvamento falhou (GitHub Pages) - Tentativa ${attempt}`);
+        }
+      } catch (saveError) {
+        console.error(`❌ Erro ao salvar entregas (GitHub Pages) - Tentativa ${attempt}:`, saveError);
+        if (attempt === maxAttempts) {
+          throw saveError;
+        }
+      }
+    }
+    
+    if (!saveSuccessful) {
+      throw new Error('Falha crítica ao salvar entregas após múltiplas tentativas (GitHub Pages)');
+    }
+    
+    // Clear analytics cache
     clearDataCache();
     
-    updateGasTable();
-    updateTotals();
+    // Update interface only if not clearing
+    if (!isDataClearingInProgress() && 
+        sessionStorage.getItem('dataClearing') !== 'true' &&
+        !sessionStorage.getItem('github_pages_clearing')) {
+      updateDeliveriesTable();
+      updateTotals();
+    }
     
-    // Update bills budget calculator when gas entries change
-    updateBillsBudgetCalculator();
+    // Notify other tabs (GitHub Pages aware)
+    notifyDataChange('deliveries');
+  } catch (error) {
+    console.error('❌ Erro ao salvar entregas (GitHub Pages):', error);
+    showToast(`Erro ao salvar entregas: ${error.message}`, 'error');
+    throw error;
+  }
+}
+
+// GitHub Pages optimized gas entries save function
+export function saveGasEntries() {
+  try {
+    console.log('💾 Salvando gastos (GitHub Pages)...');
     
-    // Notificar outras abas sobre a mudança
+    // Prepare data for GitHub Pages storage
+    const dataToSave = JSON.stringify(gasEntries);
+    
+    // GitHub Pages optimized save with verification
+    const maxAttempts = 3;
+    let saveSuccessful = false;
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        localStorage.setItem('gasEntries', dataToSave);
+        
+        // Verify save was successful
+        const savedData = localStorage.getItem('gasEntries');
+        if (savedData === dataToSave) {
+          saveSuccessful = true;
+          console.log(`✅ ${gasEntries.length} gastos salvos (GitHub Pages) - Tentativa ${attempt}`);
+          break;
+        } else {
+          console.warn(`⚠️ Verificação de salvamento falhou (GitHub Pages) - Tentativa ${attempt}`);
+        }
+      } catch (saveError) {
+        console.error(`❌ Erro ao salvar gastos (GitHub Pages) - Tentativa ${attempt}:`, saveError);
+        if (attempt === maxAttempts) {
+          throw saveError;
+        }
+      }
+    }
+    
+    if (!saveSuccessful) {
+      throw new Error('Falha crítica ao salvar gastos após múltiplas tentativas (GitHub Pages)');
+    }
+    
+    // Clear analytics cache
+    clearDataCache();
+    
+    // Update interface only if not clearing
+    if (!isDataClearingInProgress() && 
+        sessionStorage.getItem('dataClearing') !== 'true' &&
+        !sessionStorage.getItem('github_pages_clearing')) {
+      updateGasTable();
+      updateTotals();
+    }
+    
+    // Notify other tabs (GitHub Pages aware)
     notifyDataChange('gasEntries');
   } catch (error) {
-    console.error('Erro ao salvar registros de gasolina:', error);
-    showToast('Erro ao salvar registros de gasolina', 'error');
+    console.error('❌ Erro ao salvar gastos (GitHub Pages):', error);
+    showToast(`Erro ao salvar gastos: ${error.message}`, 'error');
+    throw error;
   }
 }
 
@@ -206,13 +284,29 @@ async function updateBillsBudgetCalculator() {
   }
 }
 
-// Função para carregar entregas
+// Função para carregar entregas (GitHub Pages optimized)
 export function loadDeliveries() {
+  // Check if data clearing is in progress (GitHub Pages aware)
+  if (isDataClearingInProgress() || 
+      sessionStorage.getItem('dataClearing') === 'true' ||
+      sessionStorage.getItem('github_pages_clearing')) {
+    console.log('⏸️ Carregamento de entregas pausado - limpeza em andamento (GitHub Pages)');
+    return;
+  }
+  
   loadFromLocalStorage();
 }
 
-// Função para carregar registros de gasolina
+// Função para carregar registros de gasolina (GitHub Pages optimized)
 export function loadGasEntries() {
+  // Check if data clearing is in progress (GitHub Pages aware)
+  if (isDataClearingInProgress() || 
+      sessionStorage.getItem('dataClearing') === 'true' ||
+      sessionStorage.getItem('github_pages_clearing')) {
+    console.log('⏸️ Carregamento de gastos pausado - limpeza em andamento (GitHub Pages)');
+    return;
+  }
+  
   loadFromLocalStorage();
 }
 

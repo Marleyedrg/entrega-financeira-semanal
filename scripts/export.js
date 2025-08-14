@@ -1,9 +1,175 @@
-import { deliveries, gasEntries, loadDeliveries, loadGasEntries, updateTotals } from './data.js';
-import { formatDate, getCurrentDate, showToast } from './utils.js';
-import { generateDeliveryIdentifiers } from './idGenerator.js';
-import { optimizeStoredImages, formatImageDisplay } from './imageUtils.js';
+import { deliveries, gasEntries } from './data.js';
+import { showToast } from './utils.js';
 import { renderAnalytics, clearDataCache } from './analytics.js';
 import { forceSyncAllTabs } from './sync.js';
+
+// Add a global flag to track clearing state
+let isDataClearing = false;
+
+// Function to check if data clearing is in progress
+export function isDataClearingInProgress() {
+  return isDataClearing;
+}
+
+// GitHub Pages optimized compatibility check for localStorage
+function isLocalStorageAvailable() {
+  try {
+    const test = '__github_pages_test__';
+    localStorage.setItem(test, test);
+    localStorage.removeItem(test);
+    return true;
+  } catch (e) {
+    console.warn('localStorage not available on GitHub Pages environment');
+    return false;
+  }
+}
+
+// GitHub Pages optimized compatibility check for sessionStorage
+function isSessionStorageAvailable() {
+  try {
+    const test = '__github_pages_session_test__';
+    sessionStorage.setItem(test, test);
+    sessionStorage.removeItem(test);
+    return true;
+  } catch (e) {
+    console.warn('sessionStorage not available on GitHub Pages environment');
+    return false;
+  }
+}
+
+// Universal data clearing optimized for GitHub Pages static hosting
+function universalDataClear() {
+  console.log('🌐 Executando limpeza universal de dados (GitHub Pages)...');
+  
+  // Clear localStorage with GitHub Pages specific handling
+  if (isLocalStorageAvailable()) {
+    try {
+      // Preserve bills data with GitHub Pages namespace consideration
+      const billsData = localStorage.getItem('bills');
+      const monthlyIncomeData = localStorage.getItem('monthlyIncome');
+      
+      // Clear all data with GitHub Pages specific keys
+      const keysToRemove = [];
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i);
+        if (key && (
+          key === 'deliveries' || 
+          key === 'gasEntries' || 
+          key.startsWith('backup_') ||
+          key.startsWith('__github_pages_')
+        )) {
+          keysToRemove.push(key);
+        }
+      }
+      
+      // Remove identified keys
+      keysToRemove.forEach(key => {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn(`Failed to remove ${key} on GitHub Pages:`, e);
+        }
+      });
+      
+      // Restore preserved data
+      if (billsData) localStorage.setItem('bills', billsData);
+      if (monthlyIncomeData) localStorage.setItem('monthlyIncome', monthlyIncomeData);
+      
+      // Set empty arrays
+      localStorage.setItem('deliveries', '[]');
+      localStorage.setItem('gasEntries', '[]');
+      
+      console.log('✅ localStorage cleared successfully for GitHub Pages');
+    } catch (e) {
+      console.warn('localStorage clearing failed on GitHub Pages, trying individual removal:', e);
+      // Fallback: remove individual keys
+      ['deliveries', 'gasEntries'].forEach(key => {
+        try {
+          localStorage.removeItem(key);
+          localStorage.setItem(key, '[]');
+        } catch (err) {
+          console.error(`Failed to clear ${key} on GitHub Pages:`, err);
+        }
+      });
+    }
+  }
+  
+  // Clear sessionStorage optimized for GitHub Pages
+  if (isSessionStorageAvailable()) {
+    try {
+      const clearingFlag = sessionStorage.getItem('dataClearing');
+      const integrityCheck = sessionStorage.getItem('integrity_checked');
+      
+      // Clear all except essential flags
+      sessionStorage.clear();
+      
+      // Restore essential flags
+      if (clearingFlag) sessionStorage.setItem('dataClearing', clearingFlag);
+      if (integrityCheck) sessionStorage.setItem('integrity_checked', integrityCheck);
+    } catch (e) {
+      console.warn('sessionStorage clearing failed on GitHub Pages:', e);
+    }
+  }
+  
+  // Clear memory arrays with GitHub Pages compatibility
+  try {
+    // Method 1: Clear by length (most compatible)
+    if (Array.isArray(deliveries)) {
+      deliveries.length = 0;
+    }
+    if (Array.isArray(gasEntries)) {
+      gasEntries.length = 0;
+    }
+    
+    // Method 2: Splice everything (for older browsers accessing GitHub Pages)
+    if (deliveries && deliveries.splice) {
+      deliveries.splice(0, deliveries.length);
+    }
+    if (gasEntries && gasEntries.splice) {
+      gasEntries.splice(0, gasEntries.length);
+    }
+    
+    // Method 3: Global references (GitHub Pages sometimes uses global scope)
+    if (window.deliveries) {
+      window.deliveries.length = 0;
+    }
+    if (window.gasEntries) {
+      window.gasEntries.length = 0;
+    }
+  } catch (e) {
+    console.warn('Memory array clearing failed on GitHub Pages:', e);
+  }
+}
+
+// Device detection optimized for GitHub Pages environment
+function getGitHubPagesDeviceInfo() {
+  const userAgent = navigator.userAgent || '';
+  const platform = navigator.platform || '';
+  
+  // Simplified device detection for GitHub Pages
+  const isMobile = window.innerWidth <= 768 || 
+                   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+  const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+  const isAndroid = /Android/i.test(userAgent);
+  const isSafari = /Safari/i.test(userAgent) && !/Chrome/i.test(userAgent);
+  const isChrome = /Chrome/i.test(userAgent);
+  
+  // Check for GitHub Pages specific environment
+  const isGitHubPages = window.location.hostname.includes('github.io') || 
+                        window.location.pathname.includes('/entrega-financeira-semanal/');
+  
+  return {
+    isMobile,
+    isIOS,
+    isAndroid,
+    isSafari,
+    isChrome,
+    isGitHubPages,
+    hasLocalStorage: isLocalStorageAvailable(),
+    hasSessionStorage: isSessionStorageAvailable(),
+    userAgent: userAgent.substring(0, 100) // Truncate for logging
+  };
+}
 
 // Função para validar dados antes da exportação
 function validateExportData(data, type) {
@@ -51,7 +217,7 @@ export function generateCSV(includeGas = true) {
   // Adicionar entregas
   deliveries.forEach(delivery => {
     rows.push([
-      formatDate(delivery.date),
+      delivery.date,
       'Entrega',
       delivery.id,
       delivery.orderNumber,
@@ -67,7 +233,7 @@ export function generateCSV(includeGas = true) {
   if (includeGas) {
     gasEntries.forEach(entry => {
       rows.push([
-        formatDate(entry.date),
+        entry.date,
         'Gastos',
         entry.id,
         '',
@@ -129,106 +295,146 @@ export function backupData(includeGas = true) {
   }
 }
 
-// Função para limpar dados (preservando Contas Fixas)
-export function clearAllData() {
+// Função para limpar dados (preservando Contas Fixas) - Otimizada para GitHub Pages
+export async function clearAllData() {
+  const deviceInfo = getGitHubPagesDeviceInfo();
+  console.log('🔧 GitHub Pages environment detected:', deviceInfo);
+  
   if (!confirm('Tem certeza que deseja limpar os dados? Esta ação não pode ser desfeita.\n\nOS DADOS DAS CONTAS FIXAS SERÃO PRESERVADOS.')) {
     return;
   }
   
   try {
-    // Perform data cleanup - preserving bills data
-    performCompleteDataCleanup();
+    // Set clearing flag to prevent data loading during the process
+    isDataClearing = true;
+    
+    // Perform data cleanup optimized for GitHub Pages
+    await performGitHubPagesDataCleanup(deviceInfo);
     
     showToast('Dados limpos com sucesso! Contas Fixas preservadas.', 'success');
   } catch (error) {
-    console.error('Erro ao limpar dados:', error);
+    console.error('Erro ao limpar dados no GitHub Pages:', error);
     showToast(error.message, 'error');
+  } finally {
+    // Always clear the flag
+    isDataClearing = false;
   }
 }
 
 /**
- * Performs data cleanup, removing deliveries and gas entries from browser storage
- * while preserving bills and monthly income data, and resetting application state
+ * Performs data cleanup optimized for GitHub Pages static hosting environment
  */
-function performCompleteDataCleanup() {
-  console.log('🧹 Iniciando limpeza de dados (preservando Contas Fixas)...');
+async function performGitHubPagesDataCleanup(deviceInfo) {
+  console.log('🧹 Iniciando limpeza otimizada para GitHub Pages...');
   
   try {
-    // Preserve bills data before clearing localStorage
-    console.log('🧹 Preservando dados das Contas Fixas...');
-    const billsData = localStorage.getItem('bills');
-    const monthlyIncomeData = localStorage.getItem('monthlyIncome');
-    
-    // Clear localStorage
-    console.log('🧹 Limpando localStorage...');
-    localStorage.clear();
-    
-    // Restore preserved bills data
-    if (billsData) {
-      localStorage.setItem('bills', billsData);
-      console.log('✅ Dados das contas fixas restaurados');
-    }
-    if (monthlyIncomeData) {
-      localStorage.setItem('monthlyIncome', monthlyIncomeData);
-      console.log('✅ Renda mensal restaurada');
+    // Set clearing flag for GitHub Pages environment
+    if (deviceInfo.hasSessionStorage) {
+      sessionStorage.setItem('dataClearing', 'true');
+      sessionStorage.setItem('github_pages_clearing', Date.now().toString());
     }
     
-    // Clear sessionStorage
-    console.log('🧹 Limpando sessionStorage...');
-    sessionStorage.clear();
+    // Use universal clearing method optimized for static hosting
+    universalDataClear();
     
-    // Reset in-memory arrays
-    console.log('🧹 Limpando arrays em memória...');
-    deliveries.length = 0;
-    gasEntries.length = 0;
+    // Clear analytics cache with GitHub Pages handling
+    try {
+      clearDataCache();
+    } catch (e) {
+      console.warn('Analytics cache clearing failed on GitHub Pages:', e);
+    }
     
-    // Clear analytics cache
-    console.log('🧹 Limpando cache de analytics...');
-    clearDataCache();
-    
-    // Clear any form inputs and image previews
-    console.log('🧹 Limpando formulários...');
+    // Clear forms with GitHub Pages specific selectors
+    console.log('🧹 Limpando formulários (GitHub Pages)...');
     clearFormInputs();
     
-    // Clear any broadcast channels
+    // Handle BroadcastChannel for GitHub Pages (if available)
     try {
-      console.log('🧹 Enviando mensagem de limpeza para outras abas...');
-      const syncChannel = new BroadcastChannel('entrega_financeira_sync');
-      syncChannel.postMessage({
-        type: 'FULL_CLEAR',
-        timestamp: Date.now()
-      });
-      syncChannel.close();
+      if (window.BroadcastChannel && typeof BroadcastChannel === 'function') {
+        console.log('🧹 Enviando mensagem de limpeza (GitHub Pages)...');
+        const syncChannel = new BroadcastChannel('entrega_financeira_sync');
+        syncChannel.postMessage({
+          type: 'FULL_CLEAR',
+          timestamp: Date.now(),
+          source: 'github_pages_clear',
+          deviceInfo: deviceInfo
+        });
+        syncChannel.close();
+      }
     } catch (e) {
-      console.log('BroadcastChannel não disponível para limpeza');
+      console.log('BroadcastChannel não disponível no GitHub Pages:', e);
     }
     
-    // Force cleanup of any object URLs
-    console.log('🧹 Limpando URLs de objetos...');
-    const images = document.querySelectorAll('img[src^="blob:"]');
-    images.forEach(img => {
-      if (img.src.startsWith('blob:')) {
-        URL.revokeObjectURL(img.src);
+    // Clear object URLs with GitHub Pages compatibility
+    try {
+      const images = document.querySelectorAll('img[src^="blob:"]');
+      images.forEach(img => {
+        if (img.src && img.src.startsWith('blob:')) {
+          try {
+            URL.revokeObjectURL(img.src);
+          } catch (e) {
+            console.warn('Failed to revoke blob URL on GitHub Pages:', e);
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('Object URL cleanup failed on GitHub Pages:', e);
+    }
+    
+    // Clear image previews with GitHub Pages handling
+    try {
+      const previewContainers = document.querySelectorAll('.image-preview-container');
+      previewContainers.forEach(container => {
+        container.innerHTML = '';
+      });
+    } catch (e) {
+      console.warn('Image preview cleanup failed on GitHub Pages:', e);
+    }
+    
+    // Apply mobile-specific clearing for GitHub Pages mobile users
+    if (deviceInfo.isMobile) {
+      try {
+        const { mobileForceClearData } = await import('./mobile.js');
+        mobileForceClearData();
+      } catch (mobileError) {
+        console.log('Mobile-specific clearing not available on GitHub Pages:', mobileError);
       }
-    });
+    }
     
-    // Reload data (which will now be empty)
-    console.log('🧹 Recarregando dados (agora vazios)...');
-    loadDeliveries();
-    loadGasEntries();
-    updateTotals();
+    // GitHub Pages specific memory management
+    try {
+      // Force garbage collection (if available)
+      if (window.gc && typeof window.gc === 'function') {
+        window.gc();
+      }
+      
+      // Create memory pressure for mobile GitHub Pages users
+      if (deviceInfo.isMobile) {
+        const temp = new Array(500).fill(null); // Smaller array for GitHub Pages
+        temp.length = 0;
+      }
+    } catch (e) {
+      console.log('Garbage collection not available on GitHub Pages:', e);
+    }
     
-    // Update analytics with empty data
-    console.log('🧹 Atualizando analytics...');
-    renderAnalytics();
+    // GitHub Pages specific delay (considering CDN caching)
+    const delay = deviceInfo.isMobile ? 2000 : 1500; // Longer delays for GitHub Pages
     
-    // Force tab sync
-    console.log('🧹 Sincronizando abas...');
-    forceSyncAllTabs();
+    // Clear the clearing flags after GitHub Pages appropriate delay
+    setTimeout(() => {
+      if (deviceInfo.hasSessionStorage) {
+        sessionStorage.removeItem('dataClearing');
+        sessionStorage.removeItem('github_pages_clearing');
+      }
+      console.log('✅ Limpeza GitHub Pages completa');
+    }, delay);
     
-    console.log('✅ Limpeza completa de dados concluída!');
   } catch (error) {
-    console.error('❌ Erro durante limpeza de dados:', error);
+    console.error('Erro durante limpeza GitHub Pages:', error);
+    if (deviceInfo.hasSessionStorage) {
+      sessionStorage.removeItem('dataClearing');
+      sessionStorage.removeItem('github_pages_clearing');
+    }
     throw error;
   }
 }
@@ -378,7 +584,7 @@ export function generateCSVNoImages(includeGas = true) {
   // Adicionar entregas
   deliveries.forEach(delivery => {
     rows.push([
-      formatDate(delivery.date),
+      delivery.date,
       'Entrega',
       delivery.id,
       delivery.orderNumber,
@@ -393,7 +599,7 @@ export function generateCSVNoImages(includeGas = true) {
   if (includeGas) {
     gasEntries.forEach(entry => {
       rows.push([
-        formatDate(entry.date),
+        entry.date,
         'Gastos',
         entry.id,
         '',
@@ -621,7 +827,7 @@ export function exportCustomCSV(includeDeliveries = true, includeGas = true, inc
     if (includeDeliveries) {
       filteredDeliveries.forEach(delivery => {
         const row = [
-          formatDate(delivery.date),
+          delivery.date,
           'Entrega',
           delivery.id,
           delivery.orderNumber,
@@ -645,7 +851,7 @@ export function exportCustomCSV(includeDeliveries = true, includeGas = true, inc
     if (includeGas) {
       filteredGasEntries.forEach(entry => {
         const row = [
-          formatDate(entry.date),
+          entry.date,
           'Gastos',
           entry.id,
           '',

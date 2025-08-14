@@ -3,246 +3,219 @@
  * Sistema avançado de sincronização entre múltiplas abas
  */
 
-import { 
-  loadDeliveries, 
-  loadGasEntries, 
-  updateTotals, 
-  deliveries, 
-  gasEntries 
-} from './data.js';
-import { showToast } from './utils.js';
+import { deliveries, gasEntries, loadDeliveries, loadGasEntries, updateTotals } from './data.js';
 import { renderAnalytics, clearDataCache } from './analytics.js';
+import { showToast } from './utils.js';
+import { isDataClearingInProgress } from './export.js';
 
-// Identificador único para esta sessão/aba
-const SESSION_ID = generateSessionId();
-
-// Broadcast Channel para comunicação entre abas (mais eficiente que o storage event)
-let broadcastChannel = null;
-
-// Timestamp da última atualização recebida
-let lastUpdateTimestamp = Date.now();
-
-// Estado atual da sincronização
+// GitHub Pages specific sync state
 const syncState = {
+  sessionId: null,
   isPrimary: false,
-  connectedTabs: 0,
-  lastSyncTime: null,
-  pendingChanges: [],
-  syncInProgress: false
+  syncInProgress: false,
+  lastSyncTime: 0,
+  githubPagesEnvironment: false
 };
 
-/**
- * Gera um ID de sessão único para identificar esta aba
- */
+// GitHub Pages optimized broadcast channel
+let broadcastChannel = null;
+let lastUpdateTimestamp = 0;
+
+// Initialize session ID with GitHub Pages considerations
 function generateSessionId() {
-  return `tab_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `gh-pages-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
 /**
- * Inicializa o sistema de sincronização
+ * Initialize sync system optimized for GitHub Pages
  */
 export function initializeSync() {
-  // Tentar usar Broadcast Channel API, que é mais eficiente
+  console.log('🔄 Inicializando sistema de sincronização (GitHub Pages)...');
+  
+  // Detect GitHub Pages environment
+  syncState.githubPagesEnvironment = 
+    window.location.hostname.includes('github.io') || 
+    window.location.pathname.includes('/entrega-financeira-semanal/') ||
+    window.location.hostname === 'localhost'; // For local testing
+  
+  // Generate unique session ID for GitHub Pages
+  syncState.sessionId = generateSessionId();
+  
+  // Try to initialize BroadcastChannel for GitHub Pages
   try {
-    broadcastChannel = new BroadcastChannel('entrega_financeira_sync');
-    
-    broadcastChannel.onmessage = (event) => {
-      handleSyncMessage(event.data);
-    };
-    
-    // Anunciar presença para outras abas
-    broadcastChannel.postMessage({
-      type: 'TAB_CONNECTED',
-      sessionId: SESSION_ID,
-      timestamp: Date.now()
-    });
-    
-    console.log('Broadcast Channel inicializado');
-  } catch (e) {
-    console.warn('Broadcast Channel não suportado, usando fallback com localStorage');
-    
-    // Fallback para localStorage
-    window.addEventListener('storage', (event) => {
-      if (event.key === 'deliveries' || event.key === 'gasEntries') {
-        handleStorageEvent(event);
-      } else if (event.key === 'sync_message') {
-        try {
-          const message = JSON.parse(event.newValue);
-          handleSyncMessage(message);
-        } catch (error) {
-          console.error('Erro ao processar mensagem de sincronização:', error);
-        }
-      }
-    });
-    
-    // Anunciar presença usando localStorage
-    localStorage.setItem('sync_message', JSON.stringify({
-      type: 'TAB_CONNECTED',
-      sessionId: SESSION_ID,
-      timestamp: Date.now()
-    }));
+    if (window.BroadcastChannel && typeof BroadcastChannel === 'function') {
+      broadcastChannel = new BroadcastChannel('entrega_financeira_sync');
+      broadcastChannel.onmessage = (event) => {
+        handleSyncMessage(event.data);
+      };
+      console.log('✅ BroadcastChannel initialized for GitHub Pages');
+    } else {
+      console.log('⚠️ BroadcastChannel not available on this GitHub Pages environment');
+    }
+  } catch (error) {
+    console.warn('❌ Could not initialize BroadcastChannel on GitHub Pages:', error);
+    broadcastChannel = null;
   }
   
-  // Iniciar verificação de primário
-  checkPrimaryStatus();
+  // Set initial sync timestamp
+  lastUpdateTimestamp = Date.now();
   
-  // Adicionar listener para verificar mudanças antes de fechar
-  window.addEventListener('beforeunload', () => {
-    sendSyncMessage({
-      type: 'TAB_DISCONNECTED',
-      sessionId: SESSION_ID,
-      timestamp: Date.now()
-    });
-  });
+  // Determine if this tab should be primary (GitHub Pages specific logic)
+  claimPrimaryStatus();
   
-  // Verificar periodicamente se há abas ativas
-  setInterval(checkPrimaryStatus, 30000);
+  console.log(`✅ Sync system initialized for GitHub Pages - Session: ${syncState.sessionId}`);
   
   return {
-    sessionId: SESSION_ID,
-    isPrimary: () => syncState.isPrimary
+    sessionId: syncState.sessionId,
+    isPrimary: syncState.isPrimary,
+    githubPages: syncState.githubPagesEnvironment
   };
 }
 
-/**
- * Enviar mensagem de sincronização para outras abas
- */
+// Send sync message with GitHub Pages optimizations
 function sendSyncMessage(message) {
-  message.sessionId = SESSION_ID;
+  if (!broadcastChannel) return;
   
-  if (broadcastChannel) {
-    broadcastChannel.postMessage(message);
-  } else {
-    // Usar localStorage como fallback
-    localStorage.setItem('sync_message', JSON.stringify(message));
+  try {
+    const githubPagesMessage = {
+      ...message,
+      sessionId: syncState.sessionId,
+      timestamp: Date.now(),
+      environment: 'github-pages'
+    };
     
-    // Precisamos remover e recriar para disparar eventos em outras abas
-    setTimeout(() => {
-      localStorage.removeItem('sync_message');
-    }, 50);
+    broadcastChannel.postMessage(githubPagesMessage);
+  } catch (error) {
+    console.warn('Failed to send sync message on GitHub Pages:', error);
   }
 }
 
-/**
- * Processar mensagem de sincronização recebida
- */
-function handleSyncMessage(message) {
-  if (!message || message.sessionId === SESSION_ID) return;
+// Handle incoming sync messages for GitHub Pages
+function handleSyncMessage(data) {
+  // Ignore messages from the same session
+  if (data.sessionId === syncState.sessionId) return;
   
-  // Ignorar mensagens muito antigas (mais de 1 minuto)
-  if (message.timestamp && Date.now() - message.timestamp > 60000) return;
-  
-  switch (message.type) {
-    case 'TAB_CONNECTED':
-      syncState.connectedTabs++;
-      checkPrimaryStatus();
-      break;
-      
-    case 'TAB_DISCONNECTED':
-      syncState.connectedTabs = Math.max(0, syncState.connectedTabs - 1);
-      checkPrimaryStatus();
-      break;
-      
-    case 'PRIMARY_CLAIMING':
-      // Outra aba está tentando se tornar primária
-      if (syncState.isPrimary) {
-        // Responder afirmando que já somos primários
-        sendSyncMessage({
-          type: 'PRIMARY_CLAIMED',
-          timestamp: Date.now()
-        });
-      }
-      break;
-      
-    case 'PRIMARY_CLAIMED':
-      syncState.isPrimary = false;
-      break;
-      
-    case 'DATA_CHANGED':
-      if (message.timestamp > lastUpdateTimestamp) {
-        lastUpdateTimestamp = message.timestamp;
-        syncData();
-      }
-      break;
-      
-    case 'SYNC_REQUEST':
-      // Responder com o estado atual se somos primários
-      if (syncState.isPrimary) {
-        sendSyncMessage({
-          type: 'SYNC_RESPONSE',
-          timestamp: Date.now()
-        });
-      }
-      break;
-      
-    case 'FULL_CLEAR':
-      // Recebeu notificação de limpeza completa dos dados
-      handleFullDataClear();
-      break;
+  // Check if message is too old (GitHub Pages CDN considerations)
+  const messageAge = Date.now() - (data.timestamp || 0);
+  if (messageAge > 30000) { // 30 seconds max age for GitHub Pages
+    console.log('Ignoring old sync message on GitHub Pages:', messageAge);
+    return;
   }
-}
-
-/**
- * Processar evento de storage do localStorage (fallback)
- */
-function handleStorageEvent(event) {
-  if (event.key === 'deliveries' || event.key === 'gasEntries') {
-    if (event.newValue !== event.oldValue) {
-      // Se a mudança veio de outra aba, atualizar dados
-      if (!syncState.syncInProgress) {
-        syncData();
-      }
+  
+  console.log('📨 Received sync message on GitHub Pages:', data.type);
+  
+  try {
+    switch (data.type) {
+      case 'DATA_CHANGED':
+        handleDataChange(data);
+        break;
+      case 'FULL_CLEAR':
+        handleFullDataClear();
+        break;
+      case 'PING':
+        sendSyncMessage({ type: 'PONG', originalTimestamp: data.timestamp });
+        break;
+      case 'CLAIM_PRIMARY':
+        handlePrimaryClaim(data);
+        break;
+      default:
+        console.log('Unknown sync message type on GitHub Pages:', data.type);
     }
+  } catch (error) {
+    console.error('Error handling sync message on GitHub Pages:', error);
   }
 }
 
-/**
- * Verificar se esta aba deve ser primária
- */
-function checkPrimaryStatus() {
-  // Se não houver outras abas conectadas, tornar-se primário
-  if (syncState.connectedTabs === 0 && !syncState.isPrimary) {
-    claimPrimaryStatus();
+// Handle data changes for GitHub Pages
+function handleDataChange(data) {
+  // Skip if we're currently clearing data
+  if (isDataClearingInProgress() || sessionStorage.getItem('dataClearing') === 'true') {
+    console.log('⏸️ Skipping data change during clearing on GitHub Pages');
+    return;
   }
-}
-
-/**
- * Tentar se tornar a aba primária
- */
-function claimPrimaryStatus() {
-  sendSyncMessage({
-    type: 'PRIMARY_CLAIMING',
-    timestamp: Date.now()
-  });
   
-  // Aguardar respostas por um curto período
+  // Skip if message is older than our last update
+  if (data.timestamp <= lastUpdateTimestamp) {
+    console.log('Ignoring older data change message on GitHub Pages');
+    return;
+  }
+  
+  lastUpdateTimestamp = data.timestamp;
+  
+  // Perform sync with GitHub Pages optimizations
   setTimeout(() => {
-    // Se ninguém contestou, assumir como primário
-    if (!syncState.isPrimary) {
-      syncState.isPrimary = true;
-      console.log('Esta aba agora é primária');
-      
-      // Sincronizar estado uma vez como primário
-      syncData();
+    if (!isDataClearingInProgress()) {
+      syncData(false);
     }
-  }, 300);
+  }, 100); // Small delay for GitHub Pages
 }
 
-/**
- * Lida com a limpeza completa dos dados
- * Chamada quando outra aba executa uma limpeza completa
- */
+// Claim primary status for GitHub Pages environment
+function claimPrimaryStatus() {
+  if (!broadcastChannel) {
+    syncState.isPrimary = true;
+    console.log('📌 Primary status claimed (no BroadcastChannel on GitHub Pages)');
+    return;
+  }
+  
+  try {
+    // Try to claim primary status
+    sendSyncMessage({ 
+      type: 'CLAIM_PRIMARY', 
+      claimTime: Date.now(),
+      environment: 'github-pages'
+    });
+    
+    // Set as primary after short delay if no conflicts
+    setTimeout(() => {
+      if (!syncState.isPrimary) {
+        syncState.isPrimary = true;
+        console.log('📌 Primary status claimed on GitHub Pages');
+      }
+    }, 200);
+  } catch (error) {
+    console.warn('Could not claim primary status on GitHub Pages:', error);
+    syncState.isPrimary = true; // Fallback to primary
+  }
+}
+
+// Handle primary claims for GitHub Pages
+function handlePrimaryClaim(data) {
+  // If someone else is claiming primary and they're newer, yield
+  if (data.claimTime > (syncState.lastSyncTime || 0)) {
+    syncState.isPrimary = false;
+    console.log('📌 Yielding primary status on GitHub Pages');
+  }
+}
+
+// Handle full data clear for GitHub Pages
 function handleFullDataClear() {
-  // Atualizar timestamp para evitar que mensagens antigas sejam processadas
+  // Update timestamp to avoid processing old messages
   lastUpdateTimestamp = Date.now();
   
   try {
-    // Limpar cache local
+    // Don't process if clearing is still in progress
+    if (isDataClearingInProgress() || 
+        sessionStorage.getItem('dataClearing') === 'true' ||
+        sessionStorage.getItem('github_pages_clearing')) {
+      console.log('⏸️ Aguardando conclusão da limpeza antes de processar sincronização (GitHub Pages)');
+      // Retry after clearing is complete
+      setTimeout(() => {
+        if (!isDataClearingInProgress() && 
+            sessionStorage.getItem('dataClearing') !== 'true' &&
+            !sessionStorage.getItem('github_pages_clearing')) {
+          handleFullDataClear();
+        }
+      }, 2000); // Longer delay for GitHub Pages
+      return;
+    }
+    
+    // Clear local cache
     if (broadcastChannel) {
-      // Fechar e recriar o canal para limpar buffers internos
+      // Close and recreate channel for GitHub Pages
       broadcastChannel.close();
       
-      // Recriar o canal após um pequeno delay
+      // Recreate channel after delay
       setTimeout(() => {
         try {
           broadcastChannel = new BroadcastChannel('entrega_financeira_sync');
@@ -250,58 +223,72 @@ function handleFullDataClear() {
             handleSyncMessage(event.data);
           };
         } catch (e) {
-          console.error('Erro ao recriar canal após limpeza:', e);
+          console.error('Erro ao recriar canal após limpeza no GitHub Pages:', e);
         }
-      }, 300);
+      }, 500); // Longer delay for GitHub Pages
     }
     
-    // Forçar recarga de dados
-    syncData(true);
+    // Force reload data only if not in clearing process
+    if (!isDataClearingInProgress() && 
+        sessionStorage.getItem('dataClearing') !== 'true' &&
+        !sessionStorage.getItem('github_pages_clearing')) {
+      syncData(true);
+    }
     
-    console.log('Sincronização completa após limpeza de dados');
+    console.log('Sincronização completa após limpeza no GitHub Pages');
   } catch (error) {
-    console.error('Erro ao processar limpeza de dados:', error);
+    console.error('Erro ao processar limpeza de dados no GitHub Pages:', error);
   }
 }
 
 /**
- * Sincronizar dados com localStorage
- * @param {boolean} forceFull - Forçar sincronização completa, ignorando cache
+ * Sync data with localStorage - GitHub Pages optimized
+ * @param {boolean} forceFull - Force complete sync, ignoring cache
  */
 function syncData(forceFull = false) {
+  // Don't sync if clearing is in progress
+  if (isDataClearingInProgress() || 
+      sessionStorage.getItem('dataClearing') === 'true' ||
+      sessionStorage.getItem('github_pages_clearing')) {
+    console.log('⏸️ Sincronização pausada - limpeza em andamento (GitHub Pages)');
+    return;
+  }
+  
   if (syncState.syncInProgress && !forceFull) return;
   
   syncState.syncInProgress = true;
   
   try {
-    console.log('Sincronizando dados da memória com localStorage...');
+    console.log('Sincronizando dados da memória com localStorage (GitHub Pages)...');
     
-    // Limpar cache se for sincronização forçada
+    // Clear cache if forced sync
     if (forceFull) {
-      console.log('Executando sincronização forçada completa');
-      // Não utilize cache para esta sincronização
+      console.log('Executando sincronização forçada completa (GitHub Pages)');
       
-      // Limpar arrays em memória primeiro
-      // (não usamos .length = 0 para preservar as referências originais)
+      // Clear memory arrays first
       while (deliveries.length > 0) deliveries.pop();
       while (gasEntries.length > 0) gasEntries.pop();
     }
     
-    // Recarregar dados do localStorage
-    loadDeliveries();
-    loadGasEntries();
-    
-    // Atualizar interface
-    updateTotals();
-    
-    // Limpar cache de análise e renderizar novamente
-    clearDataCache();
-    renderAnalytics();
+    // Reload data from localStorage only if not clearing
+    if (!isDataClearingInProgress() && 
+        sessionStorage.getItem('dataClearing') !== 'true' &&
+        !sessionStorage.getItem('github_pages_clearing')) {
+      loadDeliveries();
+      loadGasEntries();
+      
+      // Update interface
+      updateTotals();
+      
+      // Clear cache and render analytics
+      clearDataCache();
+      renderAnalytics();
+    }
     
     syncState.lastSyncTime = Date.now();
-    console.log('Sincronização completa:', new Date(syncState.lastSyncTime).toLocaleTimeString());
+    console.log('Sincronização GitHub Pages completa:', new Date(syncState.lastSyncTime).toLocaleTimeString());
   } catch (error) {
-    console.error('Erro durante sincronização:', error);
+    console.error('Erro durante sincronização no GitHub Pages:', error);
     showToast('Erro ao sincronizar dados', 'error');
   } finally {
     syncState.syncInProgress = false;
@@ -309,7 +296,7 @@ function syncData(forceFull = false) {
 }
 
 /**
- * Notificar outras abas sobre mudanças
+ * Notify other tabs about changes - GitHub Pages optimized
  */
 export function notifyDataChange(changeType = 'update') {
   lastUpdateTimestamp = Date.now();
@@ -317,31 +304,51 @@ export function notifyDataChange(changeType = 'update') {
   sendSyncMessage({
     type: 'DATA_CHANGED',
     changeType: changeType,
-    timestamp: lastUpdateTimestamp
+    timestamp: lastUpdateTimestamp,
+    environment: 'github-pages'
   });
 }
 
 /**
- * Forçar sincronização de dados em todas as abas
+ * Force sync all tabs - GitHub Pages optimized
  */
 export function forceSyncAllTabs() {
-  sendSyncMessage({
-    type: 'SYNC_REQUEST',
-    timestamp: Date.now()
-  });
+  console.log('🔄 Forçando sincronização de todas as abas (GitHub Pages)...');
   
-  // Atualizar a própria aba também
-  syncData();
-  
-  return syncState.lastSyncTime;
+  try {
+    sendSyncMessage({
+      type: 'FULL_SYNC',
+      timestamp: Date.now(),
+      forced: true,
+      environment: 'github-pages'
+    });
+    
+    // Also sync current tab
+    syncData(true);
+  } catch (error) {
+    console.error('Erro ao forçar sincronização no GitHub Pages:', error);
+  }
 }
 
 /**
- * Verificar estado de sincronização
+ * Get sync status - GitHub Pages specific
  */
 export function getSyncStatus() {
   return {
     ...syncState,
-    sessionId: SESSION_ID
+    broadcastChannelAvailable: !!broadcastChannel,
+    lastUpdateTime: new Date(lastUpdateTimestamp).toLocaleTimeString(),
+    environment: 'GitHub Pages'
   };
-} 
+}
+
+// Cleanup on page unload for GitHub Pages
+window.addEventListener('beforeunload', () => {
+  if (broadcastChannel) {
+    try {
+      broadcastChannel.close();
+    } catch (e) {
+      console.warn('Error closing BroadcastChannel on GitHub Pages:', e);
+    }
+  }
+}); 
